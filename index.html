@@ -33,7 +33,11 @@ main{max-width:760px;margin:0 auto;padding:16px 16px 96px}
 .muted{color:var(--muted);font-size:14px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
 .chip{flex:none;border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:5px 12px;font-size:14px;white-space:nowrap}
-.chip.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.chip.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:700;box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--brand)}
+.chip.on::before{content:"✓ "}
+.chip.all.on::before{content:""}
+.chips{flex-wrap:wrap;overflow:visible!important;padding-left:4px!important;row-gap:10px}
+.selinfo{font-size:13px;margin:-4px 0 8px;color:var(--brand);font-weight:600}
 .tag{display:inline-block;font-size:12px;border-radius:6px;padding:2px 8px;background:var(--chip);color:var(--ink);margin-right:4px}
 input[type=text],input[type=search],input[type=email],input[type=password],input[type=number],input[type=date],input[type=url],select,textarea{
   width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
@@ -145,13 +149,16 @@ const CATS = {
 };
 const AGES = ["U5","U6","U7","U8","U9","U10","U11"];
 const AGE_INFO = { U5:"Předpřípravka (4–5 let)", U6:"Předpřípravka / minipřípravka (5–6 let)", U7:"Minipřípravka (6–7 let)", U8:"Mladší přípravka (7–8 let)", U9:"Mladší přípravka (8–9 let)", U10:"Starší přípravka (9–10 let)", U11:"Starší přípravka (10–11 let)" };
-const ageOk = d => state.showAllAges || !state.profile?.age_group || !(d.age_groups||[]).length || d.age_groups.includes(state.profile.age_group);
+const myAges = () => { const p = state.profile; return p?.age_groups?.length ? ageSort(p.age_groups) : (p?.age_group ? [p.age_group] : []); };
+const ageOk = d => { const m = myAges(); return state.showAllAges || !m.length || !(d.age_groups||[]).length || d.age_groups.some(a => m.includes(a)); };
+const toggleSet = (set, k) => { if(k==="all") set.clear(); else set.has(k) ? set.delete(k) : set.add(k); };
+const catLabel = set => set.size ? [...set].map(k=>CATS[k]).join(", ") : "všechny typy";
 const ageSort = arr => [...(arr||[])].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
 const ageRange = arr => { const a = ageSort(arr); return a.length ? (a.length>1 ? a[0]+"–"+a[a.length-1] : a[0]) : ""; };
 
 
 
-const state = { user:null, profile:null, showAllAges:false, tab:"drills", drills:[], sessions:[], filter:"all", q:"", onlyFav:false, onlyCz:false, view:null };
+const state = { user:null, profile:null, showAllAges:false, tab:"drills", drills:[], sessions:[], cats:new Set(), q:"", onlyFav:false, onlyCz:false, view:null };
 const app = document.getElementById("app");
 const fab = document.getElementById("fab");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -222,16 +229,17 @@ function renderDrills(){
   const q = state.q.toLowerCase();
   const base = state.drills.filter(ageOk);
   const list = base.filter(d =>
-    (state.filter==="all" || d.category===state.filter) && (!state.onlyFav || d.favorite) &&
+    (!state.cats.size || state.cats.has(d.category)) && (!state.onlyFav || d.favorite) &&
     (!state.onlyCz || d.video_lang==="cs" || d.video_lang==="sk") &&
     (!q || [d.name,d.description,d.equipment,d.coaching_points,d.video_title].join(" ").toLowerCase().includes(q)));
   app.innerHTML = `
-    <div class="agebar">Kategorie <b>${esc(state.profile?.age_group||"")}</b>${state.showAllAges?" + ostatní":""} <button class="linkbtn" id="toSettings">změnit</button></div>
+    <div class="agebar">Kategorie <b>${esc(myAges().join(", "))}</b>${state.showAllAges?" + ostatní":""} <button class="linkbtn" id="toSettings">změnit</button></div>
     <input type="search" id="q" placeholder="Hledat cvičení, pomůcky…" value="${esc(state.q)}">
     <div class="chips" style="margin-top:10px">
-      <button class="chip ${state.filter==="all"?"on":""}" data-cat="all">Vše (${base.length})</button>
-      ${Object.entries(CATS).filter(([k])=>base.some(d=>d.category===k)).map(([k,v])=>`<button class="chip ${state.filter===k?"on":""}" data-cat="${k}">${v} (${base.filter(d=>d.category===k).length})</button>`).join("")}
+      <button class="chip all ${!state.cats.size?"on":""}" data-cat="all">Všechny typy (${base.length})</button>
+      ${Object.entries(CATS).filter(([k])=>base.some(d=>d.category===k)).map(([k,v])=>`<button class="chip ${state.cats.has(k)?"on":""}" aria-pressed="${state.cats.has(k)}" data-cat="${k}">${v} (${base.filter(d=>d.category===k).length})</button>`).join("")}
     </div>
+    ${state.cats.size?`<div class="selinfo">Vybráno: ${esc(catLabel(state.cats))} · <button class="linkbtn" data-cat="all">zrušit</button></div>`:""}
     <div class="chips" style="padding-top:0">
       <button class="chip ${state.onlyFav?"on":""}" data-favf="1">★ Oblíbené</button>
       <button class="chip ${state.onlyCz?"on":""}" data-cz="1">🇨🇿🇸🇰 Video česky/slovensky</button>
@@ -241,7 +249,7 @@ function renderDrills(){
   document.getElementById("toSettings").onclick = () => { state.tab="settings"; render(); };
   const qi = document.getElementById("q");
   qi.oninput = () => { state.q = qi.value; const pos = qi.selectionStart; renderDrills(); const n=document.getElementById("q"); n.focus(); n.setSelectionRange(pos,pos); };
-  app.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { state.filter = b.dataset.cat; renderDrills(); });
+  app.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { toggleSet(state.cats, b.dataset.cat); renderDrills(); });
   app.querySelector("[data-favf]").onclick = () => { state.onlyFav = !state.onlyFav; renderDrills(); };
   app.querySelector("[data-cz]").onclick = () => { state.onlyCz = !state.onlyCz; renderDrills(); };
   app.querySelectorAll("[data-open]").forEach(c => c.onclick = e => { if(e.target.closest("[data-fav]")) return; showDrill(c.dataset.open); });
@@ -301,7 +309,7 @@ function editDrill(d={}){
     <h2 style="margin-top:0">${d.id?"Upravit cvičení":(d.name?"Vlastní kopie cvičení":"Nové cvičení")}</h2>
     <label>Název *</label><input type="text" name="name" required value="${f("name")}">
     <label>Vhodné pro kategorie</label>
-    <div class="agepick">${AGES.map(a=>`<label class="chk"><input type="checkbox" name="age" value="${a}" ${(d.age_groups||(d.id?[]:[state.profile?.age_group])).includes(a)?"checked":""}> ${a}</label>`).join("")}</div>
+    <div class="agepick">${AGES.map(a=>`<label class="chk"><input type="checkbox" name="age" value="${a}" ${(d.age_groups||(d.id?[]:myAges())).includes(a)?"checked":""}> ${a}</label>`).join("")}</div>
     <label>Typ cvičení *</label><select name="category">${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${d.category===k?"selected":""}>${v}</option>`).join("")}</select>
     <div class="grid2">
       <div><label>Délka (min)</label><input type="number" name="duration_min" min="1" max="90" value="${f("duration_min")}"></div>
@@ -425,7 +433,7 @@ function editSession(s={}){
   state.view = { type:"editSession" }; fab.hidden = true;
   const items = [...(s.session_drills||[])].sort((a,b)=>a.position-b.position).map(x=>({ drill_id:x.drill_id, duration_min:x.duration_min||10, note:x.note||"" }));
   const today = new Date().toISOString().slice(0,10);
-  let pickCat = "all", pickQ = "";
+  const pickCats = new Set(state.cats); let pickQ = "";
   app.innerHTML = `<button class="back" id="back">‹ Zpět</button>
   <form id="sf" autocomplete="off">
     <div class="card">
@@ -445,7 +453,7 @@ function editSession(s={}){
       <div id="plan" class="plan"></div>
     </div>
     <div class="card">
-      <div class="row"><strong class="grow">Zásobník cvičení</strong><span class="muted">${state.profile?.age_group && !state.showAllAges ? "kategorie "+esc(state.profile.age_group) : "všechny kategorie"}</span></div>
+      <div class="row"><strong class="grow">Zásobník cvičení</strong><span class="muted">${myAges().length && !state.showAllAges ? "kategorie "+esc(myAges().join(", ")) : "všechny kategorie"}</span></div>
       <input type="search" id="pq" placeholder="Hledat cvičení…" style="margin-top:8px">
       <div class="chips" id="pchips" style="margin-top:8px"></div>
       <div id="pool"></div>
@@ -495,14 +503,14 @@ function editSession(s={}){
   }
   function poolList(){
     const q = pickQ.toLowerCase();
-    return state.drills.filter(d => ageOk(d) && (pickCat==="all"||d.category===pickCat) && (!q || d.name.toLowerCase().includes(q)));
+    return state.drills.filter(d => ageOk(d) && (!pickCats.size||pickCats.has(d.category)) && (!q || d.name.toLowerCase().includes(q)));
   }
   function drawPool(){
     const base = state.drills.filter(ageOk);
     const cats = Object.keys(CATS).filter(k => base.some(d=>d.category===k));
-    document.getElementById("pchips").innerHTML = `<button type="button" class="chip ${pickCat==="all"?"on":""}" data-pc="all">Vše</button>` +
-      cats.map(k=>`<button type="button" class="chip ${pickCat===k?"on":""}" data-pc="${k}">${CATS[k]}</button>`).join("");
-    document.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => { pickCat = b.dataset.pc; drawPool(); });
+    document.getElementById("pchips").innerHTML = `<button type="button" class="chip all ${!pickCats.size?"on":""}" data-pc="all">Všechny typy</button>` +
+      cats.map(k=>`<button type="button" class="chip ${pickCats.has(k)?"on":""}" aria-pressed="${pickCats.has(k)}" data-pc="${k}">${CATS[k]} (${base.filter(d=>d.category===k).length})</button>`).join("");
+    document.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => { toggleSet(pickCats, b.dataset.pc); drawPool(); });
     const used = new Set(items.map(x=>x.drill_id));
     const list = poolList();
     pool.innerHTML = list.map(d=>`<div class="po" data-id="${d.id}">
@@ -588,33 +596,37 @@ async function loadProfile(){
 }
 function renderSettings(first=false){
   fab.hidden = true;
-  const cur = state.profile?.age_group || "";
+  const cur = new Set(myAges());
   app.innerHTML = `<div class="card">
-    <h2 style="margin-top:0">${first?"Vítej! Pro jakou kategorii trénuješ?":"Nastavení"}</h2>
-    <p class="muted" style="margin-top:0">Zásobník cvičení i výběr při skládání tréninku se automaticky vyfiltruje podle tvé kategorie.</p>
+    <h2 style="margin-top:0">${first?"Vítej! Pro jaké kategorie trénuješ?":"Nastavení"}</h2>
+    <p class="muted" style="margin-top:0">Vyber jednu nebo více kategorií. Zásobník cvičení i výběr při skládání tréninku se podle nich automaticky vyfiltruje.</p>
     <label>Moje kategorie</label>
-    <div class="agepick">${AGES.map(a=>`<button type="button" class="chip ${cur===a?"on":""}" data-age="${a}">${a}</button>`).join("")}</div>
-    <p class="muted">${AGE_INFO[cur]||"Vyber kategorii."}</p>
+    <div class="agepick">${AGES.map(a=>`<button type="button" class="chip ${cur.has(a)?"on":""}" aria-pressed="${cur.has(a)}" data-age="${a}">${a}</button>`).join("")}</div>
+    <div class="selinfo" style="margin-top:8px">${cur.size ? "Vybráno: " + ageSort([...cur]).join(", ") : '<span class="muted">Zatím nic nevybráno.</span>'}</div>
+    <div class="muted">${ageSort([...cur]).map(a=>`${a} – ${AGE_INFO[a]}`).join("<br>")}</div>
+    ${first?`<button class="btn primary" id="goOn" style="margin-top:14px;width:100%" ${cur.size?"":"disabled"}>Pokračovat</button>`:""}
     <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:14px"><input type="checkbox" id="allAges" ${state.showAllAges?"checked":""}> Zobrazovat i cvičení pro jiné kategorie</label>
     ${first?"":`<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:12px" class="muted">Přihlášen: ${esc(state.user.email)}</div>`}
   </div>`;
   app.querySelectorAll("[data-age]").forEach(b => b.onclick = async () => {
-    const age_group = b.dataset.age;
-    const { error } = await sb.from("profiles").upsert({ user_id: state.user.id, age_group, updated_at: new Date().toISOString() });
+    const set = new Set(myAges()); toggleSet(set, b.dataset.age);
+    const age_groups = ageSort([...set]);
+    const { error } = await sb.from("profiles").upsert({ user_id: state.user.id, age_groups, age_group: age_groups[0] || null, updated_at: new Date().toISOString() });
     if(error) return fail(error);
-    state.profile = { ...(state.profile||{}), age_group };
-    toast("Kategorie nastavena: " + age_group);
-    if(first){ state.tab = "drills"; render(); } else renderSettings();
+    state.profile = { ...(state.profile||{}), age_groups, age_group: age_groups[0] || null };
+    setTitle(); renderSettings(first);
   });
+  const go = document.getElementById("goOn"); if(go) go.onclick = () => { state.tab = "drills"; render(); };
   document.getElementById("allAges").onchange = e => { state.showAllAges = e.target.checked; try{ localStorage.setItem("allAges", e.target.checked?"1":""); }catch(_){} };
 }
+function setTitle(){ const m = myAges(); document.getElementById("title").textContent = "⚽ Trenér" + (m.length ? " " + (m.length>2 ? ageRange(m) : m.join("+")) : ""); }
 
 /* ---------- SHELL ---------- */
 function render(){
   if(!state.user) return renderAuth();
   document.getElementById("tabs").hidden = false; document.getElementById("logoutBtn").hidden = false;
-  document.getElementById("title").textContent = "⚽ Trenér" + (state.profile?.age_group ? " " + state.profile.age_group : "");
-  if(!state.profile?.age_group){ document.getElementById("tabs").hidden = true; return renderSettings(true); }
+  setTitle();
+  if(!myAges().length){ document.getElementById("tabs").hidden = true; return renderSettings(true); }
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab===state.tab));
   if(state.view?.type==="drill") return showDrill(state.view.id);
   if(state.view?.type==="session") return showSession(state.view.id);
