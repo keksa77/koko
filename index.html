@@ -86,17 +86,48 @@ dialog .dbody{padding:8px 16px 16px;overflow:auto}
 .vid{flex:none;background:#c4302b;color:#fff;text-decoration:none;font-size:13px;font-weight:700;border-radius:8px;padding:5px 9px;white-space:nowrap}
 .print-only{display:none}
 @media print{.print-only{display:block;font-size:11px;color:#555;word-break:break-all} .tl-desc{display:block;-webkit-line-clamp:unset} .tl-more summary{display:none}}
+.agebar{font-size:14px;margin:-4px 0 10px;color:var(--muted)}
+.agebar b{color:var(--brand)}
+.linkbtn{border:0;background:none;color:var(--brand);text-decoration:underline;padding:0 4px;font-size:14px}
+.agepick{display:flex;flex-wrap:wrap;gap:6px}
+.agepick .chip{font-size:16px;padding:8px 16px}
+label.chk{display:inline-flex;gap:4px;align-items:center;font-weight:500;margin:0 10px 0 0}
+.plan{min-height:60px}
+.pi,.po{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);background:var(--card)}
+.pi:first-child,.po:first-child{border-top:0}
+.handle{flex:none;touch-action:none;cursor:grab;font-size:22px;line-height:1;color:var(--muted);padding:6px 4px;user-select:none}
+.pt{flex:none;width:44px;font-weight:700;color:var(--brand);font-size:14px}
+.pn{font-weight:600;font-size:15px;line-height:1.25}
+.pw{font-size:12px;color:#b35c00;font-weight:600}
+.pnote{margin-top:4px;width:100%;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:13px;background:var(--card)}
+.dur{flex:none;display:flex;align-items:center;gap:2px}
+.dur button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--chip);font-size:18px;line-height:1}
+.dur b{min-width:22px;text-align:center}
+.dur small{color:var(--muted);margin-right:2px}
+.x{flex:none;border:0;background:none;color:var(--muted);font-size:16px;padding:4px}
+.add{flex:none;width:36px;height:36px;border-radius:50%;border:0;background:var(--brand);color:var(--brand-ink);font-size:22px;line-height:1}
+.dropempty{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted)}
+.ph{height:46px;border:2px dashed var(--brand);border-radius:10px;margin:4px 0;background:rgba(31,122,63,.06)}
+.ghost{position:fixed;z-index:50;pointer-events:none;opacity:.92;box-shadow:0 8px 24px rgba(0,0,0,.25);border-radius:10px;padding:6px 8px;background:var(--card)}
+.dragging{opacity:.3}
+.savebar{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;background:var(--card);border-top:1px solid var(--line);padding:10px 12px;margin:0 -16px -96px;font-size:14px;font-weight:600;z-index:5}
+input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
+.sdate{flex:none;width:52px;text-align:center;border-radius:10px;background:var(--chip);padding:6px 0;line-height:1.1}
+.sdate b{display:block;font-size:20px;color:var(--brand)}
+.sdate span{font-size:11px;text-transform:uppercase;color:var(--muted)}
+.past{opacity:.6}
 @media print{header,nav.tabs,.fab,.noprint{display:none!important} body{background:#fff;color:#000} .card{box-shadow:none;border-color:#bbb;break-inside:avoid}}
 </style>
 </head>
 <body>
 <header>
-  <h1>⚽ Zásobník cvičení U7</h1>
+  <h1 id="title">⚽ Trenér</h1>
   <button id="logoutBtn" hidden>Odhlásit</button>
 </header>
 <nav class="tabs" id="tabs" hidden>
   <button data-tab="drills" class="on">Cvičení</button>
   <button data-tab="sessions">Tréninky</button>
+  <button data-tab="settings" style="flex:0 0 auto;padding:12px 16px" aria-label="Nastavení">⚙</button>
 </nav>
 <main id="app"><p class="muted">Načítám…</p></main>
 <button class="fab" id="fab" hidden aria-label="Přidat">+</button>
@@ -109,13 +140,18 @@ const SUPABASE_KEY = "sb_publishable_TDu2OlylMytb4BmS0sks3w_vklKVRmv";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const CATS = {
-  rozcvicka:"Rozcvička", koordinace:"Koordinace", vedeni:"Vedení míče", prihravky:"Přihrávky",
-  strelba:"Střelba", souboje:"Souboje 1v1", mala_hra:"Malá hra", zabava:"Zábavná hra"
+  rozcvicka:"Rozcvička", pohybova:"Pohybová hra", zabava:"Zábavná hra", koordinace:"Koordinace", rychlost:"Rychlost", sila:"Síla",
+  vedeni:"Vedení míče", prihravky:"Přihrávky", strelba:"Střelba", souboje:"Souboje", mala_hra:"Malá hra"
 };
+const AGES = ["U5","U6","U7","U8","U9","U10","U11"];
+const AGE_INFO = { U5:"Předpřípravka (4–5 let)", U6:"Předpřípravka / minipřípravka (5–6 let)", U7:"Minipřípravka (6–7 let)", U8:"Mladší přípravka (7–8 let)", U9:"Mladší přípravka (8–9 let)", U10:"Starší přípravka (9–10 let)", U11:"Starší přípravka (10–11 let)" };
+const ageOk = d => state.showAllAges || !state.profile?.age_group || !(d.age_groups||[]).length || d.age_groups.includes(state.profile.age_group);
+const ageSort = arr => [...(arr||[])].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
+const ageRange = arr => { const a = ageSort(arr); return a.length ? (a.length>1 ? a[0]+"–"+a[a.length-1] : a[0]) : ""; };
 
 
 
-const state = { user:null, tab:"drills", drills:[], sessions:[], filter:"all", q:"", onlyFav:false, onlyCz:false, view:null };
+const state = { user:null, profile:null, showAllAges:false, tab:"drills", drills:[], sessions:[], filter:"all", q:"", onlyFav:false, onlyCz:false, view:null };
 const app = document.getElementById("app");
 const fab = document.getElementById("fab");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -180,19 +216,21 @@ function drillCard(d){
     <div class="row"><div class="grow"><p class="drill-title">${esc(d.name)}</p>
       <div class="muted">${[d.duration_min?d.duration_min+" min":"", players(d), d.coaches_needed?`${d.coaches_needed} trenér${d.coaches_needed>1?"i":""}`:""].filter(Boolean).map(esc).join(" · ")}</div></div>
       ${isMine(d)?`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}" aria-label="Oblíbené">${d.favorite?"★":"☆"}</button>`:""}</div>
-    <div style="margin-top:6px"><span class="tag">${CATS[d.category]}</span>${d.video_url?`<span class="tag">▶ ${LANG[d.video_lang]||"video"}</span>`:""}${d.checked?`<span class="tag">✓ ověřeno</span>`:""}</div></div>`;
+    <div style="margin-top:6px"><span class="tag">${CATS[d.category]||d.category}</span>${d.age_groups?.length?`<span class="tag">${ageRange(d.age_groups)}</span>`:""}${d.video_url?`<span class="tag">▶ ${LANG[d.video_lang]||"video"}</span>`:""}${d.xps_video&&!d.video_url?`<span class="tag">▶ video v XPS</span>`:""}${d.source?.startsWith("FAČR")?`<span class="tag">FAČR</span>`:""}${d.checked?`<span class="tag">✓ ověřeno</span>`:""}</div></div>`;
 }
 function renderDrills(){
   const q = state.q.toLowerCase();
-  const list = state.drills.filter(d =>
+  const base = state.drills.filter(ageOk);
+  const list = base.filter(d =>
     (state.filter==="all" || d.category===state.filter) && (!state.onlyFav || d.favorite) &&
     (!state.onlyCz || d.video_lang==="cs" || d.video_lang==="sk") &&
     (!q || [d.name,d.description,d.equipment,d.coaching_points,d.video_title].join(" ").toLowerCase().includes(q)));
   app.innerHTML = `
+    <div class="agebar">Kategorie <b>${esc(state.profile?.age_group||"")}</b>${state.showAllAges?" + ostatní":""} <button class="linkbtn" id="toSettings">změnit</button></div>
     <input type="search" id="q" placeholder="Hledat cvičení, pomůcky…" value="${esc(state.q)}">
     <div class="chips" style="margin-top:10px">
-      <button class="chip ${state.filter==="all"?"on":""}" data-cat="all">Vše</button>
-      ${Object.entries(CATS).map(([k,v])=>`<button class="chip ${state.filter===k?"on":""}" data-cat="${k}">${v} (${state.drills.filter(d=>d.category===k).length})</button>`).join("")}
+      <button class="chip ${state.filter==="all"?"on":""}" data-cat="all">Vše (${base.length})</button>
+      ${Object.entries(CATS).filter(([k])=>base.some(d=>d.category===k)).map(([k,v])=>`<button class="chip ${state.filter===k?"on":""}" data-cat="${k}">${v} (${base.filter(d=>d.category===k).length})</button>`).join("")}
     </div>
     <div class="chips" style="padding-top:0">
       <button class="chip ${state.onlyFav?"on":""}" data-favf="1">★ Oblíbené</button>
@@ -200,6 +238,7 @@ function renderDrills(){
     </div>
     <p class="muted" style="margin:0 0 8px">${list.length} cvičení</p>
     <div id="list">${list.map(drillCard).join("") || `<div class="empty">${state.drills.length ? "Nic neodpovídá filtru." : "Zatím tu nejsou žádná cvičení. Přidej vlastní tlačítkem +."}</div>`}</div>`;
+  document.getElementById("toSettings").onclick = () => { state.tab="settings"; render(); };
   const qi = document.getElementById("q");
   qi.oninput = () => { state.q = qi.value; const pos = qi.selectionStart; renderDrills(); const n=document.getElementById("q"); n.focus(); n.setSelectionRange(pos,pos); };
   app.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { state.filter = b.dataset.cat; renderDrills(); });
@@ -230,16 +269,17 @@ function showDrill(id){
    <div class="card">
     <div class="row"><h2 class="grow" style="margin:0">${esc(d.name)}</h2>
       ${mine?`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}">${d.favorite?"★":"☆"}</button>`:""}</div>
-    <div style="margin:8px 0"><span class="tag">${CATS[d.category]}</span>
+    <div style="margin:8px 0"><span class="tag">${CATS[d.category]||d.category}</span>${d.age_groups?.length?`<span class="tag">🎯 ${ageRange(d.age_groups)}</span>`:""}
       ${d.duration_min?`<span class="tag">⏱ ${d.duration_min} min</span>`:""}
       ${players(d)?`<span class="tag">👥 ${esc(players(d))}</span>`:""}
       ${d.coaches_needed?`<span class="tag">🧑‍🏫 ${d.coaches_needed} trenér${d.coaches_needed>1?"i":""}</span>`:""}
       ${d.area?`<span class="tag">📐 ${esc(d.area)}</span>`:""}</div>
     ${videoBlock(d)}
+    ${d.xps_video && !d.video_url ? `<div class="section"><h3>Video</h3><p>▶ Video je v aplikaci XPS: <b>Sbírky → Příručka FAČR → ${esc(d.name)}</b></p></div>` : ""}
     ${sec("Průběh",d.description)}${sec("Příprava",d.setup)}${sec("Pomůcky",d.equipment)}
     ${sec("Na co dbát",d.coaching_points)}${sec("Varianty",d.variations)}
-    ${mine?`<label class="noprint" style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:16px"><input type="checkbox" id="chk" ${d.checked?"checked":""}> Video jsem zkontroloval, popis sedí</label>`
-      :`<p class="muted noprint" style="margin-top:16px">Cvičení ze společné knihovny. Popis vznikl podle názvu videa – před použitím si video krátce pusť.</p>`}
+    ${d.source?`<p class="muted" style="margin-top:14px">Zdroj: ${esc(d.source)}</p>`:""}
+    ${mine && d.video_url?`<label class="noprint" style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:16px"><input type="checkbox" id="chk" ${d.checked?"checked":""}> Video jsem zkontroloval, popis sedí</label>`:""}
     <div class="row noprint" style="margin-top:14px"><button class="btn primary" id="edit">${mine?"Upravit":"Upravit jako vlastní kopii"}</button><span class="grow"></span>${mine?`<button class="btn danger" id="del">Smazat</button>`:""}</div>
    </div>`;
   document.getElementById("back").onclick = () => { state.view=null; render(); };
@@ -260,7 +300,9 @@ function editDrill(d={}){
   <form class="card" id="df">
     <h2 style="margin-top:0">${d.id?"Upravit cvičení":(d.name?"Vlastní kopie cvičení":"Nové cvičení")}</h2>
     <label>Název *</label><input type="text" name="name" required value="${f("name")}">
-    <label>Kategorie *</label><select name="category">${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${d.category===k?"selected":""}>${v}</option>`).join("")}</select>
+    <label>Vhodné pro kategorie</label>
+    <div class="agepick">${AGES.map(a=>`<label class="chk"><input type="checkbox" name="age" value="${a}" ${(d.age_groups||(d.id?[]:[state.profile?.age_group])).includes(a)?"checked":""}> ${a}</label>`).join("")}</div>
+    <label>Typ cvičení *</label><select name="category">${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${d.category===k?"selected":""}>${v}</option>`).join("")}</select>
     <div class="grid2">
       <div><label>Délka (min)</label><input type="number" name="duration_min" min="1" max="90" value="${f("duration_min")}"></div>
       <div><label>Trenérů potřeba</label><input type="number" name="coaches_needed" min="1" max="6" value="${f("coaches_needed")}"></div>
@@ -281,7 +323,9 @@ function editDrill(d={}){
   document.getElementById("back").onclick = () => state.drills.some(x=>x.id===d.id) ? showDrill(d.id) : (state.view=null, render());
   document.getElementById("df").onsubmit = async e => {
     e.preventDefault();
-    const fd = Object.fromEntries(new FormData(e.target));
+    const form = new FormData(e.target);
+    const age_groups = form.getAll("age"); form.delete("age");
+    const fd = Object.fromEntries(form); fd.age_groups = age_groups;
     for(const k of ["duration_min","players_min","players_max","coaches_needed"]) fd[k] = fd[k] ? Number(fd[k]) : null;
     for(const k in fd) if(fd[k]==="") fd[k]=null;
     const btn = e.submitter; btn.disabled = true;
@@ -301,10 +345,17 @@ function sessionTimes(s){
   return start==null ? "" : `${hhmm(start)}–${hhmm(start+sessionTotal(s))}`;
 }
 function renderSessions(){
-  app.innerHTML = state.sessions.length ? state.sessions.map(s=>`
-    <div class="card" data-sopen="${s.id}" style="cursor:pointer">
-      <p class="drill-title">${esc(s.title)}</p>
-      <div class="muted">${fmtDate(s.date)}${s.start_time?" · "+sessionTimes(s):""} · ${(s.session_drills||[]).length} cvičení · ${sessionTotal(s)} min${s.coaches?` · ${s.coaches} trenér${s.coaches>1?"i":""}`:""}</div></div>`).join("")
+  const today = new Date().toISOString().slice(0,10);
+  const upcoming = state.sessions.filter(s=>s.date>=today).sort((a,b)=>a.date.localeCompare(b.date)||(a.start_time||"").localeCompare(b.start_time||""));
+  const past = state.sessions.filter(s=>s.date<today);
+  const card = (s, isPast) => { const d = new Date(s.date+"T00:00");
+    return `<div class="card ${isPast?"past":""}" data-sopen="${s.id}" style="cursor:pointer"><div class="row" style="align-items:flex-start">
+      <div class="sdate"><span>${d.toLocaleDateString("cs-CZ",{weekday:"short"})}</span><b>${d.getDate()}.</b><span>${d.toLocaleDateString("cs-CZ",{month:"short"})}</span></div>
+      <div class="grow"><p class="drill-title">${esc(s.title)}</p>
+      <div class="muted">${s.start_time?sessionTimes(s)+" · ":""}${(s.session_drills||[]).length} cvičení · ${sessionTotal(s)} min${s.players_expected?` · 👥 ${s.players_expected}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div></div></div></div>`; };
+  app.innerHTML = state.sessions.length
+    ? (upcoming.length?`<h3 class="muted" style="margin:0 0 8px">Nadcházející</h3>${upcoming.map(s=>card(s,false)).join("")}`:`<div class="empty">Žádný nadcházející trénink. Tlačítkem + ho poskládáš.</div>`)
+      + (past.length?`<h3 class="muted" style="margin:18px 0 8px">Proběhlé</h3>${past.map(s=>card(s,true)).join("")}`:"")
     : `<div class="empty"><p>Zatím žádný naplánovaný trénink.</p><p>Tlačítkem + si poskládej trénink ze cvičení.</p></div>`;
   app.querySelectorAll("[data-sopen]").forEach(c => c.onclick = () => showSession(c.dataset.sopen));
 }
@@ -345,7 +396,7 @@ function showSession(id){
   <div class="card" style="padding:12px 14px">
     <h2 style="margin:0;font-size:20px">${esc(s.title)}</h2>
     <div class="sumgrid">
-      <div><span>📅</span>${fmtDate(s.date)}</div>
+      <div style="grid-column:1/-1;font-size:17px;font-weight:700;color:var(--brand)"><span>📅</span>${new Date(s.date+"T00:00").toLocaleDateString("cs-CZ",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
       <div style="white-space:nowrap"><span>⏱</span>${start!=null?`${hhmm(start)}–${end} · `:""}<b>${t} min</b></div>
       <div><span>👥</span>${kids?`${kids} dětí`:"děti neuvedeny"}</div>
       <div><span>🧑‍🏫</span>${s.coaches?`${s.coaches} trenér${s.coaches>1?"i":""}`:"trenéři neuvedeni"}</div>
@@ -372,66 +423,148 @@ function showSession(id){
 }
 function editSession(s={}){
   state.view = { type:"editSession" }; fab.hidden = true;
-  const items = [...(s.session_drills||[])].sort((a,b)=>a.position-b.position).map(x=>({ drill_id:x.drill_id, duration_min:x.duration_min, note:x.note||"" }));
+  const items = [...(s.session_drills||[])].sort((a,b)=>a.position-b.position).map(x=>({ drill_id:x.drill_id, duration_min:x.duration_min||10, note:x.note||"" }));
   const today = new Date().toISOString().slice(0,10);
+  let pickCat = "all", pickQ = "";
   app.innerHTML = `<button class="back" id="back">‹ Zpět</button>
-  <form class="card" id="sf">
-    <h2 style="margin-top:0">${s.id?"Upravit trénink":"Nový trénink"}</h2>
-    <label>Název *</label><input type="text" name="title" required placeholder="např. Úterní trénink" value="${esc(s.title||"")}">
-    <div class="grid2"><div><label>Datum</label><input type="date" name="date" required value="${esc(s.date||today)}"></div>
-    <div><label>Začátek</label><input type="time" name="start_time" value="${esc((s.start_time||"").slice(0,5))}" style="width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px"></div>
-    <div><label>Počet trenérů</label><input type="number" name="coaches" min="1" max="10" value="${esc(s.coaches??"")}"></div>
-    <div><label>Počet dětí</label><input type="number" name="players_expected" min="1" max="60" value="${esc(s.players_expected??"")}"></div></div>
-    <label>Poznámka</label><textarea name="note" placeholder="Téma, docházka, co se povedlo…">${esc(s.note||"")}</textarea>
-    <label>Rozvrh tréninku <span class="muted" id="tot"></span></label>
-    <div id="items"></div>
-    <button type="button" class="btn small" id="add" style="margin-top:8px">+ Přidat cvičení</button>
-    <div class="row" style="margin-top:18px"><button class="btn primary grow" type="submit">Uložit trénink</button></div>
+  <form id="sf" autocomplete="off">
+    <div class="card">
+      <h2 style="margin:0 0 6px">${s.id?"Upravit trénink":"Nový trénink"}</h2>
+      <div class="grid2">
+        <div style="grid-column:1/-1"><label>Název *</label><input type="text" name="title" required placeholder="např. Úterní trénink" value="${esc(s.title||"")}"></div>
+        <div><label>📅 Datum konání *</label><input type="date" name="date" required value="${esc(s.date||today)}"></div>
+        <div><label>🕔 Začátek</label><input type="time" name="start_time" value="${esc((s.start_time||"").slice(0,5))}"></div>
+        <div><label>🧑‍🏫 Trenérů</label><input type="number" name="coaches" min="1" max="10" value="${esc(s.coaches??"")}"></div>
+        <div><label>👥 Dětí</label><input type="number" name="players_expected" min="1" max="60" value="${esc(s.players_expected??"")}"></div>
+      </div>
+      <details style="margin-top:8px"><summary class="muted">Poznámka k tréninku</summary><textarea name="note" placeholder="Téma, docházka, co se povedlo…">${esc(s.note||"")}</textarea></details>
+    </div>
+    <div class="card">
+      <div class="row"><strong class="grow">Rozvrh tréninku</strong><span class="muted" id="tot"></span></div>
+      <p class="muted" style="margin:2px 0 8px">Přetáhni cvičení za úchyt ⠿ ze zásobníku sem, nebo klepni na +. Pořadí měníš přetažením, délku tlačítky − / +.</p>
+      <div id="plan" class="plan"></div>
+    </div>
+    <div class="card">
+      <div class="row"><strong class="grow">Zásobník cvičení</strong><span class="muted">${state.profile?.age_group && !state.showAllAges ? "kategorie "+esc(state.profile.age_group) : "všechny kategorie"}</span></div>
+      <input type="search" id="pq" placeholder="Hledat cvičení…" style="margin-top:8px">
+      <div class="chips" id="pchips" style="margin-top:8px"></div>
+      <div id="pool"></div>
+    </div>
+    <div class="savebar"><span id="tot2" class="grow"></span><button class="btn primary" type="submit">Uložit trénink</button></div>
   </form>`;
-  const form = document.getElementById("sf"), box = document.getElementById("items");
+  const form = document.getElementById("sf"), plan = document.getElementById("plan"), pool = document.getElementById("pool");
+  const findD = id => state.drills.find(x=>x.id===id);
+
   function totals(){
     const sum = items.reduce((a,x)=>a+(Number(x.duration_min)||0),0);
     const st = toMin(form.start_time.value);
-    document.getElementById("tot").textContent = `(celkem ${sum} min${st!=null?`, ${hhmm(st)}–${hhmm(st+sum)}`:""})`;
+    const txt = `${items.length} cvičení · ${sum} min${st!=null?` · ${hhmm(st)}–${hhmm(st+sum)}`:""}`;
+    document.getElementById("tot").textContent = txt;
+    document.getElementById("tot2").textContent = txt;
     let acc = 0;
-    box.querySelectorAll("[data-when]").forEach((el,i) => { const a=acc; acc += Number(items[i].duration_min)||0; el.textContent = st!=null ? `${hhmm(st+a)}–${hhmm(st+acc)}` : `${a}.–${acc}. min`; });
-    const c = Number(form.coaches.value)||0;
-    box.querySelectorAll("[data-cw]").forEach((el,i) => { const d = state.drills.find(x=>x.id===items[i].drill_id); el.hidden = !(c && d?.coaches_needed > c); });
+    plan.querySelectorAll(".pi").forEach((row,i) => { const a=acc; acc += Number(items[i].duration_min)||0; row.querySelector(".pt").textContent = st!=null ? hhmm(st+a) : `${a}'`; });
+    const c = Number(form.coaches.value)||0, kids = Number(form.players_expected.value)||0;
+    plan.querySelectorAll(".pi").forEach((row,i) => {
+      const d = findD(items[i].drill_id); const w = [];
+      if(c && d?.coaches_needed > c) w.push(`potřeba ${d.coaches_needed} trenérů`);
+      if(kids && ((d?.players_min && kids < d.players_min) || (d?.players_max && kids > d.players_max))) w.push(`pro ${d.players_min||"?"}–${d.players_max||"?"} dětí`);
+      row.querySelector(".pw").textContent = w.length ? "⚠ " + w.join(", ") : "";
+    });
   }
-  function draw(){
-    box.innerHTML = items.length ? items.map((it,i)=>{ const d=state.drills.find(x=>x.id===it.drill_id);
-      return `<div class="plan-item" style="flex-wrap:wrap"><span class="num">${i+1}</span>
-        <div class="grow"><div>${esc(d?.name||"?")}</div><div class="muted" data-when></div><div class="muted" data-cw hidden style="color:#b35c00">⚠ potřeba ${d?.coaches_needed} trenérů</div></div>
-        <input type="number" min="1" max="90" value="${it.duration_min??""}" data-min="${i}" aria-label="minut"><span class="muted">min</span>
-        <button type="button" class="iconbtn" data-up="${i}" ${i?"":"disabled"} aria-label="Posunout nahoru">↑</button>
-        <button type="button" class="iconbtn" data-rm="${i}" aria-label="Odebrat">✕</button>
-        <input type="text" data-note="${i}" placeholder="Poznámka (kdo vede, stanoviště…)" value="${esc(it.note)}" style="flex-basis:100%;margin-left:34px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)"></div>`; }).join("")
-      : `<p class="muted">Zatím prázdné.</p>`;
-    box.querySelectorAll("[data-min]").forEach(inp => inp.oninput = () => { items[inp.dataset.min].duration_min = inp.value?Number(inp.value):null; totals(); });
-    box.querySelectorAll("[data-note]").forEach(inp => inp.oninput = () => { items[inp.dataset.note].note = inp.value; });
-    box.querySelectorAll("[data-up]").forEach(b => b.onclick = () => { const i=+b.dataset.up; [items[i-1],items[i]]=[items[i],items[i-1]]; draw(); });
-    box.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { items.splice(+b.dataset.rm,1); draw(); });
+  function drawPlan(){
+    plan.innerHTML = items.length ? items.map((it,i)=>{ const d=findD(it.drill_id);
+      return `<div class="pi" data-i="${i}">
+        <span class="handle" data-h="plan" aria-label="Přesunout">⠿</span>
+        <span class="pt"></span>
+        <div class="grow" style="min-width:0">
+          <div class="pn">${esc(d?.name||"?")}</div>
+          <div class="muted" style="font-size:12px">${CATS[d?.category]||""}${d?.xps_video||d?.video_url?" · ▶":""}</div>
+          <div class="pw"></div>
+          <input class="pnote" data-note="${i}" placeholder="poznámka (kdo vede, stanoviště…)" value="${esc(it.note)}">
+        </div>
+        <div class="dur"><button type="button" data-dm="${i}">−</button><b>${it.duration_min}</b><small>min</small><button type="button" data-dp="${i}">+</button></div>
+        <button type="button" class="x" data-rm="${i}" aria-label="Odebrat">✕</button>
+      </div>`; }).join("")
+      : `<div class="dropempty">Sem přetáhni cvičení ze zásobníku</div>`;
+    plan.querySelectorAll("[data-dm]").forEach(b => b.onclick = () => { const it=items[b.dataset.dm]; it.duration_min=Math.max(1,(it.duration_min||0)-1); drawPlan(); });
+    plan.querySelectorAll("[data-dp]").forEach(b => b.onclick = () => { const it=items[b.dataset.dp]; it.duration_min=Math.min(90,(it.duration_min||0)+1); drawPlan(); });
+    plan.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { items.splice(+b.dataset.rm,1); drawPlan(); drawPool(); });
+    plan.querySelectorAll("[data-note]").forEach(inp => inp.oninput = () => { items[inp.dataset.note].note = inp.value; });
+    plan.querySelectorAll('[data-h="plan"]').forEach(h => h.onpointerdown = e => startDrag(e, { type:"plan", index:+h.closest(".pi").dataset.i }, h.closest(".pi")));
     totals();
   }
-  form.start_time.oninput = totals; form.coaches.oninput = totals;
-  draw();
-  const dlg = document.getElementById("pickDlg"), ps = document.getElementById("pickSearch"), pl = document.getElementById("pickList");
-  let pickCat = "all";
-  function drawPick(){
-    const q = ps.value.toLowerCase();
-    const chips = `<div class="chips" style="margin-top:8px"><button type="button" class="chip ${pickCat==="all"?"on":""}" data-pc="all">Vše</button>${Object.entries(CATS).map(([k,v])=>`<button type="button" class="chip ${pickCat===k?"on":""}" data-pc="${k}">${v}</button>`).join("")}</div>`;
-    pl.innerHTML = chips + (state.drills.filter(d=>(pickCat==="all"||d.category===pickCat)&&(!q||d.name.toLowerCase().includes(q)))
-      .map(d=>`<div class="pick"><div class="grow"><b>${esc(d.name)}</b><div class="muted">${CATS[d.category]}${d.duration_min?" · "+d.duration_min+" min":""}${d.coaches_needed?" · 🧑‍🏫 "+d.coaches_needed:""}${d.video_url?" · ▶":""}</div></div><button type="button" class="btn small primary" data-pick="${d.id}">Přidat</button></div>`).join("")
-      || `<p class="muted">Nic nenalezeno.</p>`);
-    pl.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => { pickCat = b.dataset.pc; drawPick(); });
-    pl.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => { const d=state.drills.find(x=>x.id===b.dataset.pick); items.push({ drill_id:d.id, duration_min:d.duration_min, note:"" }); draw(); b.textContent="✓"; setTimeout(()=>b.textContent="Přidat",700); });
+  function poolList(){
+    const q = pickQ.toLowerCase();
+    return state.drills.filter(d => ageOk(d) && (pickCat==="all"||d.category===pickCat) && (!q || d.name.toLowerCase().includes(q)));
   }
-  ps.oninput = drawPick;
-  document.getElementById("add").onclick = () => { ps.value=""; drawPick(); dlg.showModal(); };
-  document.getElementById("pickClose").onclick = () => dlg.close();
+  function drawPool(){
+    const base = state.drills.filter(ageOk);
+    const cats = Object.keys(CATS).filter(k => base.some(d=>d.category===k));
+    document.getElementById("pchips").innerHTML = `<button type="button" class="chip ${pickCat==="all"?"on":""}" data-pc="all">Vše</button>` +
+      cats.map(k=>`<button type="button" class="chip ${pickCat===k?"on":""}" data-pc="${k}">${CATS[k]}</button>`).join("");
+    document.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => { pickCat = b.dataset.pc; drawPool(); });
+    const used = new Set(items.map(x=>x.drill_id));
+    const list = poolList();
+    pool.innerHTML = list.map(d=>`<div class="po" data-id="${d.id}">
+        <span class="handle" data-h="pool" aria-label="Přetáhnout do tréninku">⠿</span>
+        <div class="grow" style="min-width:0"><div class="pn">${esc(d.name)}${used.has(d.id)?' <span class="muted">✓</span>':""}</div>
+          <div class="muted" style="font-size:12px">${CATS[d.category]} · ${d.duration_min||10} min${d.coaches_needed>1?` · 🧑‍🏫 ${d.coaches_needed}`:""}${d.xps_video||d.video_url?" · ▶":""}</div></div>
+        <button type="button" class="add" data-add="${d.id}" aria-label="Přidat na konec">+</button>
+      </div>`).join("") || `<p class="muted">Nic nenalezeno.</p>`;
+    pool.querySelectorAll("[data-add]").forEach(b => b.onclick = () => { addDrill(b.dataset.add, items.length); });
+    pool.querySelectorAll('[data-h="pool"]').forEach(h => h.onpointerdown = e => startDrag(e, { type:"pool", id:h.closest(".po").dataset.id }, h.closest(".po")));
+  }
+  function addDrill(id, at){ const d=findD(id); items.splice(at,0,{ drill_id:id, duration_min:d?.duration_min||10, note:"" }); drawPlan(); drawPool(); toast("Přidáno: "+(d?.name||"")); }
+
+  // ---- drag & drop (myš i dotyk) ----
+  let drag = null;
+  function startDrag(e, payload, srcEl){
+    e.preventDefault();
+    const r = srcEl.getBoundingClientRect();
+    const ghost = srcEl.cloneNode(true);
+    ghost.classList.add("ghost"); ghost.style.width = r.width+"px"; ghost.style.left = r.left+"px"; ghost.style.top = r.top+"px";
+    document.body.appendChild(ghost);
+    const ph = document.createElement("div"); ph.className = "ph";
+    if(payload.type==="plan") srcEl.classList.add("dragging");
+    drag = { payload, ghost, ph, srcEl, dx:e.clientX-r.left, dy:e.clientY-r.top, index:null };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp, { once:true });
+    document.addEventListener("pointercancel", onUp, { once:true });
+    onMove(e);
+  }
+  function onMove(e){
+    if(!drag) return;
+    drag.ghost.style.left = (e.clientX-drag.dx)+"px"; drag.ghost.style.top = (e.clientY-drag.dy)+"px";
+    // automatické posouvání stránky u okrajů
+    if(e.clientY < 70) scrollBy(0,-12); else if(e.clientY > innerHeight-90) scrollBy(0,12);
+    const pr = plan.getBoundingClientRect();
+    const inside = e.clientY > pr.top-40 && e.clientY < pr.bottom+40 && e.clientX > pr.left-20 && e.clientX < pr.right+20;
+    if(!inside){ drag.ph.remove(); drag.index = null; return; }
+    const rows = [...plan.querySelectorAll(".pi")].filter(x=>x!==drag.srcEl);
+    let idx = rows.length;
+    for(let i=0;i<rows.length;i++){ const rr=rows[i].getBoundingClientRect(); if(e.clientY < rr.top+rr.height/2){ idx=i; break; } }
+    drag.index = idx;
+    const empty = plan.querySelector(".dropempty"); if(empty) empty.remove();
+    if(idx < rows.length) plan.insertBefore(drag.ph, rows[idx]); else plan.appendChild(drag.ph);
+  }
+  function onUp(){
+    document.removeEventListener("pointermove", onMove);
+    if(!drag) return;
+    const { payload, index } = drag;
+    drag.ghost.remove(); drag.ph.remove(); drag.srcEl.classList.remove("dragging");
+    drag = null;
+    if(index==null){ drawPlan(); return; }
+    if(payload.type==="plan"){ const [it] = items.splice(payload.index,1); items.splice(index,0,it); drawPlan(); }
+    else addDrill(payload.id, index);
+  }
+
+  document.getElementById("pq").oninput = e => { pickQ = e.target.value; drawPool(); };
+  form.start_time.oninput = totals; form.coaches.oninput = totals; form.players_expected.oninput = totals;
+  drawPlan(); drawPool();
   document.getElementById("back").onclick = () => s.id ? showSession(s.id) : (state.view=null, render());
   form.onsubmit = async e => {
     e.preventDefault();
+    if(!items.length && !confirm("Trénink zatím nemá žádné cvičení. Uložit i tak?")) return;
     const fd = Object.fromEntries(new FormData(form));
     for(const k of ["coaches","players_expected"]) fd[k] = fd[k] ? Number(fd[k]) : null;
     for(const k in fd) if(fd[k]==="") fd[k]=null;
@@ -448,29 +581,61 @@ function editSession(s={}){
   scrollTo(0,0);
 }
 
+/* ---------- SETTINGS ---------- */
+async function loadProfile(){
+  const { data, error } = await sb.from("profiles").select("*").eq("user_id", state.user.id).maybeSingle();
+  if(error) throw error; state.profile = data || null;
+}
+function renderSettings(first=false){
+  fab.hidden = true;
+  const cur = state.profile?.age_group || "";
+  app.innerHTML = `<div class="card">
+    <h2 style="margin-top:0">${first?"Vítej! Pro jakou kategorii trénuješ?":"Nastavení"}</h2>
+    <p class="muted" style="margin-top:0">Zásobník cvičení i výběr při skládání tréninku se automaticky vyfiltruje podle tvé kategorie.</p>
+    <label>Moje kategorie</label>
+    <div class="agepick">${AGES.map(a=>`<button type="button" class="chip ${cur===a?"on":""}" data-age="${a}">${a}</button>`).join("")}</div>
+    <p class="muted">${AGE_INFO[cur]||"Vyber kategorii."}</p>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:14px"><input type="checkbox" id="allAges" ${state.showAllAges?"checked":""}> Zobrazovat i cvičení pro jiné kategorie</label>
+    ${first?"":`<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:12px" class="muted">Přihlášen: ${esc(state.user.email)}</div>`}
+  </div>`;
+  app.querySelectorAll("[data-age]").forEach(b => b.onclick = async () => {
+    const age_group = b.dataset.age;
+    const { error } = await sb.from("profiles").upsert({ user_id: state.user.id, age_group, updated_at: new Date().toISOString() });
+    if(error) return fail(error);
+    state.profile = { ...(state.profile||{}), age_group };
+    toast("Kategorie nastavena: " + age_group);
+    if(first){ state.tab = "drills"; render(); } else renderSettings();
+  });
+  document.getElementById("allAges").onchange = e => { state.showAllAges = e.target.checked; try{ localStorage.setItem("allAges", e.target.checked?"1":""); }catch(_){} };
+}
+
 /* ---------- SHELL ---------- */
 function render(){
   if(!state.user) return renderAuth();
   document.getElementById("tabs").hidden = false; document.getElementById("logoutBtn").hidden = false;
+  document.getElementById("title").textContent = "⚽ Trenér" + (state.profile?.age_group ? " " + state.profile.age_group : "");
+  if(!state.profile?.age_group){ document.getElementById("tabs").hidden = true; return renderSettings(true); }
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab===state.tab));
   if(state.view?.type==="drill") return showDrill(state.view.id);
   if(state.view?.type==="session") return showSession(state.view.id);
+  if(state.tab==="settings") return renderSettings();
   fab.hidden = false;
   state.tab==="drills" ? renderDrills() : renderSessions();
 }
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => { state.tab = b.dataset.tab; state.view = null; render(); });
 fab.onclick = () => state.tab==="drills" ? editDrill() : editSession();
 document.getElementById("logoutBtn").onclick = () => sb.auth.signOut();
+try{ state.showAllAges = !!localStorage.getItem("allAges"); }catch(_){}
 
 let loadedFor = null;
 sb.auth.onAuthStateChange((_ev, session) => {
   const u = session?.user || null;
   state.user = u;
-  if(!u){ loadedFor = null; state.drills=[]; state.sessions=[]; state.view=null; return render(); }
+  if(!u){ loadedFor = null; state.drills=[]; state.sessions=[]; state.profile=null; state.view=null; return render(); }
   if(loadedFor === u.id) return;
   loadedFor = u.id;
   setTimeout(async () => {
-    try{ await Promise.all([loadDrills(), loadSessions()]); }catch(e){ fail(e); }
+    try{ await Promise.all([loadDrills(), loadSessions(), loadProfile()]); }catch(e){ fail(e); }
     render();
   }, 0);
 });
