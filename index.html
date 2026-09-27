@@ -57,7 +57,10 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
 .star.on{color:var(--accent)}
 .drill-title{font-weight:700;font-size:17px;margin:0}
 .section h3{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:16px 0 4px}
-.section p{margin:0;white-space:pre-wrap}
+.section p{margin:0 0 4px;white-space:pre-wrap}
+.section ul{margin:2px 0 6px;padding-left:20px}
+.section li{margin:3px 0;line-height:1.35}
+.section p.goal{font-weight:600}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .empty{text-align:center;padding:32px 8px;color:var(--muted)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;max-width:90vw}
@@ -185,6 +188,9 @@ const Anim = (() => {
     };
     S.ladder = (x, y, len, rungs = 7) => { const g = el("g", {}, L.stuff); el("rect", { x, y: y - 5, width: len, height: 10, fill: "none", stroke: "#facc15", "stroke-width": 1.2 }, g); for (let i = 1; i < rungs; i++) el("line", { x1: x + i * len / rungs, y1: y - 5, x2: x + i * len / rungs, y2: y + 5, stroke: "#facc15", "stroke-width": 1.2 }, g); return g; };
     S.hurdle = (x, y) => { const g = el("g", { transform: `translate(${x},${y})` }, L.stuff); el("path", { d: "M-5 4 L-5 -2 L5 -2 L5 4", fill: "none", stroke: "#f43f5e", "stroke-width": 1.6 }, g); return g; };
+    S.hoop = (x, y, c = "#f59e0b") => el("circle", { cx: x, cy: y, r: 7, fill: "none", stroke: c, "stroke-width": 1.8 }, L.stuff);
+    S.flag = (x, y, c = "#facc15") => { const g = el("g", { transform: `translate(${x},${y})` }, L.stuff); el("line", { x1: 0, y1: 4, x2: 0, y2: -10, stroke: "#fff", "stroke-width": 1.2 }, g); el("path", { d: "M0 -10 L8 -7 L0 -4 Z", fill: c }, g); return g; };
+    S.rope = (x1, y1, x2, y2) => el("path", { d: `M${x1} ${y1} Q${(x1 + x2) / 2} ${(y1 + y2) / 2 + 6} ${x2} ${y2}`, fill: "none", stroke: "#a16207", "stroke-width": 2 }, L.stuff);
     S.mat = (x, y, w, h, c = "#60a5fa") => el("rect", { x, y, width: w, height: h, rx: 2, fill: c, "fill-opacity": .75, stroke: "#1e3a8a", "stroke-width": .8 }, L.field);
 
     S.kid = (color, opt = {}) => {
@@ -214,7 +220,7 @@ const Anim = (() => {
         armL.setAttribute("x2", -6 - sw * 1.6 - up); armL.setAttribute("y2", up ? -7 : 3);
         armR.setAttribute("x2", 6 + sw * 1.6 + up); armR.setAttribute("y2", up ? -7 : 3);
         const hop = st.hop ? -3.5 * Math.abs(Math.sin(S.time * 9)) : 0;
-        body.setAttribute("transform", st.down ? `translate(0,8) rotate(-90) scale(.95,1)` : `translate(0,${hop}) scale(${k.dir},1)`);
+        body.setAttribute("transform", st.down ? `translate(0,8) rotate(-90) scale(.95,1)` : st.low ? `translate(0,5) rotate(${-55 * k.dir}) scale(${k.dir},.8)` : `translate(0,${hop + (st.jump ? -5 * Math.abs(Math.sin(S.time * 6 + k.idx)) : 0)}) scale(${k.dir},1)`);
         head.setAttribute("fill", st.sick ? "#bef264" : "#f1c9a5");
         g.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
         g.setAttribute("opacity", st.alpha ?? 1);
@@ -483,7 +489,827 @@ const Anim = (() => {
     box.querySelector('[data-a="restart"]').onclick = () => { t = 0; };
     return { stop() { dead = true; cancelAnimationFrame(raf); }, seek(x) { t = x; S.time = x; sc.update(x); cap.textContent = sc.caption?.(x) || ""; }, T: sc.T };
   }
-  return { mount, has: n => !!SCENES[n], names: () => Object.keys(SCENES) };
+  return { mount, has: n => !!SCENES[n], names: () => Object.keys(SCENES), register: (n, f, vb) => { SCENES[n] = f; if (vb) VB[n] = vb; }, stage };
+})();
+
+window.ANIM_SPECS = (window.ANIM_SPECS || []).concat([
+  { drill: "Bago bez míče", template: "tag", effect: "home", runners: 4, chasers: 1, events: 3,
+    field: { x: 70, y: 36, w: 160, h: 140 }, box: [95, 60, 205, 150],
+    props: [{ type: "cone", x: 78, y: 44, home: true, label: "Meta", lx: 50, ly: 44 }, { type: "cone", x: 222, y: 44, home: true, label: "Meta", lx: 250, ly: 44 },
+            { type: "cone", x: 78, y: 168, home: true, label: "Meta", lx: 50, ly: 168 }, { type: "cone", x: 222, y: 168, home: true, label: "Meta", lx: 250, ly: 168 }],
+    chaserLabel: "Bago", effectLabel: "Mám metu!",
+    idleCaption: "Hráči si vyměňují mety, bago obsazuje volnou metu", catchCaption: "Kdo zůstane bez mety, jde do baga" },
+
+  { drill: "Ballkontrolle – ovládání míče pro nejmenší", template: "dribble", players: 6, field: { label: "Čtverec 15 × 15 m" },
+    props: [{ type: "cone", x: 80, y: 70 }, { type: "cone", x: 220, y: 70 }, { type: "cone", x: 150, y: 140 }],
+    signals: [[2, "stop", "Ťukačky a kutálení podrážkou, míč pod tělem", 3.5, null, "Podrážky!"],
+              [7, "target", "Vedení míče kolem kuželu", 4, null, "Kolem kuželu!"],
+              [12.5, "swap", "Na signál výměna míče s kamarádem", 2.5, null, "Výměna!"]],
+    captions: [[0, "Trenér ukazuje, děti opakují"]] },
+
+  { drill: "Bombardování", template: "exercise", players: 4, cols: 2, mats: true, poses: ["down", "down", "low"], every: 2.5,
+    props: [{ type: "ball", x: 92, y: 62 }, { type: "ball", x: 180, y: 62 }, { type: "ball", x: 92, y: 114 }, { type: "ball", x: 180, y: 114 }],
+    labels: [{ text: "Bomby (míčky) padají z ruky", x: 150, y: 40, color: "orange" }],
+    poseLabels: { down: "Dítě leží na zádech na podložce", low: "Bomba padá – dítě se převalí na stranu" },
+    coachTag: "Rodič pouští bomby", field: { label: "Podložky" } },
+
+  { drill: "Buď svojím trenérem 3 (U7–U9)", template: "dribble", players: 6, field: { label: "15 × 15 m" }, coachLabel: "Trenér / rodič",
+    props: [{ type: "cone", x: 70, y: 60, color: "yellow" }, { type: "cone", x: 150, y: 60, color: "yellow" }, { type: "cone", x: 230, y: 60, color: "yellow" },
+            { type: "cone", x: 110, y: 140, color: "yellow" }, { type: "cone", x: 190, y: 140, color: "yellow" }],
+    signals: [[3, "target", "Obcházení kloboučků", 4, null, "Kloboučky!"], [9.5, "stop", "Podrážky – míč pod kontrolou", 3, null, "Podrážky!"]],
+    captions: [[0, "Každé dítě vede svůj míč, obě nohy"]] },
+
+  { drill: "Cesta k pokladu", template: "collect", source: [240, 100], sourceLabel: "Poklad",
+    teams: [{ color: "blue", home: [50, 52], n: 2, label: "Start" }, { color: "blue", home: [50, 152], n: 2, label: "Start" }],
+    defenders: 1, defenderLabel: "Obr (trenér)", defenderColor: "black",
+    props: [{ type: "hurdle", x: 120, y: 69 }, { type: "hurdle", x: 150, y: 76, label: "Dráha: překážky", ly: 58 },
+            { type: "ladder", x: 100, y: 134, len: 44 }],
+    labels: [{ text: "Dráha: žebřík", x: 122, y: 156 }],
+    goCaption: "Každý si vybere dráhu a běží k pokladu", backCaption: "S pokladem zpět – obr se snaží chytat" },
+
+  { drill: "Cesta přes les", template: "cross", runners: 5, catchers: 2, effect: "back", catcherLabel: "Zlobr",
+    zones: [{ x: 105, y: 22, w: 90, h: 158, color: "green", label: "Les", ly: 30 }], zone: [105, 195],
+    labels: [{ text: "Start / domeček", x: 50, y: 190 }, { text: "Poklad (míče)", x: 250, y: 190, color: "orange" }],
+    props: [{ type: "ball", x: 262, y: 176 }, { type: "ball", x: 270, y: 172 }, { type: "ball", x: 278, y: 176 }],
+    runCaption: "Děti prochází lesem, zlobři je chytají", effectLabel: "Zpět na začátek",
+    captions: [[0, "Na povel děti vyráží do lesa"], [0.8, "Prochází lesem, zlobři je chytají"], [4, "Chycený zpět na začátek, ostatní berou poklad"],
+      [5.5, "Poklad (míč) nesou přes les do domečku"], [9.5, "Koho se zlobr dotkne, vrací se na začátek"], [11, "Znovu přes les – každý si vybere cestu"], [15, "Chycený se vrací na začátek"]] },
+
+  { drill: "Čtverec obratů s 1 na 1", template: "dribble", players: 6, field: { x: 55, y: 30, w: 190, h: 148, label: "Čtverec 15 × 15 m" },
+    box: [80, 55, 220, 160],
+    props: [{ type: "gate", x: 60, y: 104, w: 16, label: "Brána", lx: 40, ly: 104 }, { type: "gate", x: 240, y: 104, w: 16, label: "Brána", lx: 262, ly: 104 },
+            { type: "cone", x: 142, y: 35 }, { type: "cone", x: 158, y: 35 }, { type: "cone", x: 142, y: 173 }, { type: "cone", x: 158, y: 173 }],
+    labels: [{ text: "Brána", x: 185, y: 35 }, { text: "Brána", x: 185, y: 173 }],
+    signals: [[3, "target", "U brány obrat zvolený trenérem", 4, null, "Obrat!"], [10, "swap", "2. fáze: 1 na 1 – projeď bránou s míčem = bod", 4, null, "1 na 1!"]],
+    coachAt: [30, 170], captions: [[0, "1. fáze: děti vedou míč ve čtverci"]] },
+
+  { drill: "Čtyři zakončení pro nejmenší", template: "shooting", keeper: true, queue: [55, 150], via: [[120, 130], [185, 112]], goal: [268, 100, 0],
+    field: { label: "20 × 20 m + branka" }, props: [{ type: "cone", x: 120, y: 140, color: "yellow" }],
+    captions: [[0, "Vedení míče a střela – mířit mimo brankáře"], [6.4, "Každý gól oslavit, hodně opakování"]] },
+
+  { drill: "Dobývání hradu", template: "tag", effect: "out", runners: 5, chasers: 2, events: 3,
+    runnerColor: "blue", chaserColor: "red", chaserLabel: "Strážce", effectLabel: "Oživení: kotoul", taskPose: "low",
+    box: [95, 55, 205, 150], outZone: { x: 262, y: 160 },
+    props: [{ type: "cone", x: 150, y: 52 }, { type: "cone", x: 184, y: 66 }, { type: "cone", x: 198, y: 100 }, { type: "cone", x: 184, y: 134 },
+            { type: "cone", x: 150, y: 148 }, { type: "cone", x: 116, y: 134 }, { type: "cone", x: 102, y: 100 }, { type: "cone", x: 116, y: 66 },
+            { type: "mat", x: 244, y: 168, w: 36, h: 12 }],
+    labels: [{ text: "Hrad (kruh z met)", x: 52, y: 100, color: "red" }, { text: "Stanoviště oživení", x: 240, y: 192 }],
+    idleCaption: "Strážci (červení) tahají dobyvatele (modré) do hradu",
+    catchCaption: "Vtažený nevypadává – běží se oživit a vrací se" },
+
+  { drill: "Dobývání území", template: "collect", source: [205, 100], sourceLabel: "Poklad",
+    zones: [{ x: 160, y: 50, w: 90, h: 100, color: "red", label: "Hrad", ly: 42 }],
+    teams: [{ color: "blue", home: [55, 100], n: 3, label: "Domeček modrých" }],
+    defenders: 2, defenderLabel: "Hlídá", defenderColor: "red",
+    goCaption: "Modří se snaží dostat do hradu pro poklad", backCaption: "Ukradený poklad nesou domů, pak výměna rolí" },
+
+  { drill: "Dopravní zácpa", template: "dribble", field: { label: "Město 20 × 20 m" }, coachLabel: "Policista (trenér)",
+    props: [{ type: "gate", x: 80, y: 60, color: "yellow", label: "Garáž", ly: 44 }, { type: "gate", x: 225, y: 140, color: "yellow", label: "Garáž", ly: 158 }, { type: "hoop", x: 150, y: 100 }],
+    labels: [{ text: "Roh", x: 38, y: 36 }],
+    signals: [[2, "stop", "Červená – zastav míč podrážkou", 2.5, null, "Červená!"],
+              [6, "target", "Garáž – zaparkuj míč v bráně", 3, null, "Garáž!"],
+              [10.5, "gather", "Zácpa – všichni do jednoho rohu", 3, [55, 50], "Zácpa!"]],
+    captions: [[0, "Zelená – auta jezdí po městě (vedou míč)"]] },
+
+  { drill: "Fotbalová přípravka pro nejmenší – hry", template: "tag", effect: "swap", ball: true, chaserBall: true, chasers: 1, runners: 7, chaserLabel: "Honič",
+    field: { label: "20 × 20 m" }, idleCaption: "Honička s míčem – každé dítě má míč", catchCaption: "Chycený se stává honičem" },
+
+  { drill: "FUNino 3v3 na 4 branky", template: "smallgame", n: 3,
+    goals: [[22, 50, 180, "blue"], [22, 150, 180, "blue"], [278, 50, 0, "red"], [278, 150, 0, "red"]],
+    zones: [{ x: 20, y: 22, w: 55, h: 158, color: "yellow", label: "Zóna střelby", ly: 190, dash: "3 3" },
+            { x: 225, y: 22, w: 55, h: 158, color: "yellow", label: "Zóna střelby", ly: 190, dash: "3 3" }] },
+
+  { drill: "Gymnastika pro děti", template: "exercise", players: 6, mats: true, poses: ["low", "down", "jump"],
+    poseLabels: { low: "Po čtyřech – zpevnit trup", down: "Leh – prvky na podložce", jump: "Výskoky – každý svým tempem" },
+    coachTag: "Trenér dopomáhá" },
+
+  { drill: "Hon na draka (střelba)", template: "shooting", target: true, targetLabel: "Drak", goalW: 16,
+    queue: [60, 150], via: [[110, 130]], goal: [215, 100, 180], field: { label: "20 × 15 m" },
+    props: [{ type: "cone", x: 222, y: 88 }, { type: "cone", x: 222, y: 112 }, { type: "cone", x: 232, y: 100 }],
+    labels: [{ text: "Rytíři", x: 45, y: 125, color: "blue" }],
+    captions: [[0, "Rytíři střílí do draka vnitřní stranou nohy"], [6.4, "Po zásahu drak couvne, míč hned doběhnout"]] },
+
+  { drill: "Honička s domečky", template: "tag", effect: "home", chasers: 1, runners: 7,
+    props: [{ type: "hoop", x: 70, y: 60, label: "Domeček", ly: 88 }, { type: "hoop", x: 230, y: 60, label: "Domeček", ly: 88 }, { type: "hoop", x: 150, y: 150, label: "Domeček", ly: 176 }],
+    effectLabel: "Domeček 1-2-3", chaserLabel: "Honič",
+    catchCaption: "V domečku se hráč schová na 3 s (počítá nahlas)" },
+
+  { drill: "Honička s překážkami", template: "tag", effect: "swap", chasers: 1, runners: 7,
+    props: [{ type: "goal", x: 90, y: 70, ang: 0, w: 20, label: "Úkryt" }, { type: "cone", x: 210, y: 60 }, { type: "cone", x: 216, y: 66 },
+            { type: "hurdle", x: 150, y: 120, label: "Překážka" }, { type: "cone", x: 80, y: 145 }, { type: "minigoal", x: 225, y: 145, ang: 180, label: "Úkryt" }],
+    chaserLabel: "Honič", idleCaption: "Klasická honička – děti se schovávají za pomůcky", catchCaption: "Chycený se stává honičem" },
+
+  { drill: "Hra na babu s míčem", template: "tag", effect: "sit", ball: true, chaserBall: true, chasers: 2, runners: 7,
+    taskPose: "low", effectLabel: "Úkol: klik", chaserLabel: "Baba",
+    idleCaption: "Všichni vedou míč, dva hráči mají babu", catchCaption: "Chycený splní úkol (klik, dřep, nášlapy) a hraje dál" },
+
+  { drill: "Hra na ocásky", template: "tag", effect: "tail", chasers: 2, runners: 7, outZone: { x: 262, y: 168 },
+    labels: [{ text: "Trenér – náhradní ocásky", x: 210, y: 192 }], chaserLabel: "Lovec", effectLabel: "Nový ocásek",
+    idleCaption: "Hráči si navzájem kradou ocásky", catchCaption: "Bez ocásku k trenérovi pro nový – nikdo nevypadává" },
+
+  { drill: "Hravé vedení míče v hale", template: "dribble", players: 7, field: { label: "Hala 20 × 15 m" },
+    props: [{ type: "cone", x: 70, y: 60 }, { type: "hoop", x: 230, y: 60, label: "Obruč" }, { type: "gate", x: 150, y: 100, label: "Branka" },
+            { type: "hoop", x: 80, y: 145, label: "Obruč" }, { type: "cone", x: 225, y: 145 }],
+    signals: [[2, "target", "Obkroužit kužel / zastavit míč v obruči", 3.5, null, "Úkol!"],
+              [7.5, "stop", "Zastavení podrážkou", 2.5, null, "Stop!"],
+              [11.5, "target", "Projet branku – úkoly se rychle mění", 3.5, null, "Nový úkol!"]] },
+
+  { drill: "Hry 1v1 pro děti (Fun Drills For Kids)", template: "duel", pairs: 2, T: 10,
+    attacker: [45, 60], defender: [150, 35], target: [255, 60], attacker2: [255, 145], defender2: [150, 170], target2: [45, 145],
+    props: [{ type: "minigoal", x: 266, y: 60, ang: 0 }, { type: "minigoal", x: 34, y: 145, ang: 180 }],
+    field: { label: "Malá pole 15 × 15 m" },
+    captions: [[0, "Dvojice 1 na 1, souboj trvá 20–30 s"], [5, "Trenér počítá góly a mění soupeře"]] },
+
+  { drill: "Hry a zábavná cvičení U6 (FAČR)", template: "dribble", players: 8, field: { label: "20 × 20 m" },
+    signals: [[3, "sit", "Na povel dřep – všichni v pohybu", 2.5, null, "Dřep!"], [8, "gather", "Všichni k trenérovi – jednoduchá pravidla", 3, [150, 150], "Ke mně!"]],
+    coachAt: [150, 186], captions: [[0, "Zábavné hry s míčem, hodně pochvaly"]] },
+]);
+
+window.ANIM_SPECS = (window.ANIM_SPECS || []).concat([
+  { drill: "Hulk, Banáni a Spidermani", template: "exercise", players: 6, cols: 3, poses: ["stand", "push", "down"], every: 3,
+    poseLabels: { stand: "Baba s míčem – na povel zastavit míč", push: "Hulk: přetlačování ve dvojici", down: "Banán / Superman: leh, nohy nad zemí" },
+    coachTag: "Trenér dává povel" },
+
+  { drill: "Klamavé pohyby - rychlost", template: "duel", ball: false, attacker: [40, 100], defender: [150, 58], target: [262, 100],
+    aLabel: "Útočník", dLabel: "Obránce", winLabel: "Proběhl!", loseLabel: "Dotkl se!",
+    props: [{ type: "cone", x: 110, y: 78 }, { type: "cone", x: 190, y: 78 }, { type: "cone", x: 110, y: 130 }, { type: "cone", x: 190, y: 130 }],
+    labels: [{ text: "Území mezi kužely", x: 150, y: 150 }],
+    captions: [[0, "Útočník klamavým pohybem obelstí obránce"], [3, "Snaží se proběhnout územím mezi kužely"], [5, "Obránce se ho snaží dotknout"]] },
+
+  { drill: "Klamavé pohyby 1:1", template: "duel", ball: false, aColor: "red", dColor: "blue", attacker: [42, 100], defender: [150, 62], target: [258, 62],
+    aLabel: "Útočník", dLabel: "Obránce", winLabel: "Proběhl!", loseLabel: "Chycen!",
+    props: [{ type: "cone", x: 30, y: 116, label: "Kužel", ly: 132 }, { type: "gate", x: 262, y: 62, w: 22, label: "Branka", ly: 86 },
+      { type: "gate", x: 262, y: 142, w: 22, label: "Branka", ly: 166 }, { type: "gate", x: 150, y: 44, w: 14, color: "blue" }],
+    labels: [{ text: "Branka obránce", x: 200, y: 44 }],
+    captions: [[0, "Útočník obíhá kužel, obránce obíhá svou branku"], [2, "Útočník kličkuje a míří do jedné z branek"], [5, "Obránce se ho snaží chytit"]] },
+
+  { drill: "Koordinačně - obratnostní dráha", template: "course", ball: true, finish: "shot", goal: [276, 100, 0], players: 4, alt: true,
+    path: [[28, 145, "run", "Start"], [75, 145, "zigzag", "Slalom", -30], [140, 145, "hurdle", "Překážky", -34], [195, 120, "run"], [240, 100, "run", "Zakončení"]],
+    props: [{ type: "cone", x: 88, y: 145 }, { type: "cone", x: 106, y: 145 }, { type: "cone", x: 124, y: 145 }, { type: "hurdle", x: 158, y: 137 }, { type: "hurdle", x: 176, y: 128 }],
+    labels: [{ text: "Skupiny soutěží, střídají dráhy", x: 150, y: 50 }],
+    captions: [[0, "Vedení míče slalomem"], [4, "Přeskoky překážek a zakončení do branky"], [8, "Po zakončení návrat do zástupu"]] },
+
+  { drill: "Koordinační kruhy", template: "course", ball: false, players: 3, gap: 2.4,
+    path: [[30, 70, "hop", "Start"], [150, 70, "run", "Koordinační kruhy", -24], [245, 70, "run", "Převzetí míče"], [245, 140, "zigzag"], [60, 140, "run", "Dovednost s míčem cestou zpět", 16]],
+    props: [{ type: "hoop", x: 55, y: 70 }, { type: "hoop", x: 80, y: 70 }, { type: "hoop", x: 105, y: 70 }, { type: "hoop", x: 130, y: 70 }, { type: "ball", x: 255, y: 82 }, { type: "ball", x: 262, y: 78 }],
+    captions: [[0, "Proběhnout kruhy předepsaným způsobem"], [4, "Převzít míč na konci"], [8, "Cestou zpět technická dovednost, pak do zástupu"]] },
+
+  { drill: "Krabi", template: "cross", ball: true, runners: 5, catchers: 3, catcherLabel: "Krab", catcherColor: "red", effect: "back", effectLabel: "Míč vykopnut!",
+    zone: [100, 200], zones: [{ x: 100, y: 22, w: 100, h: 158, color: "orange", label: "Území krabů", ly: 190 }],
+    labels: [{ text: "Loď lovců", x: 50, y: 13 }, { text: "Poklady", x: 250, y: 13 }],
+    runCaption: "Lovci vedou míč volným prostorem a kličkují přes kraby",
+    captions: [[0, "Lovci vedou míč přes území krabů pro poklad"], [5.5, "S pokladem zpět na loď, krabi vykopávají míče"], [11, "Kdo přijde o míč, vrací se zpět"]] },
+
+  { drill: "Krakonoši a dřevorubci", template: "dribble", ball: false, twoTeams: true, coach: false, players: 8,
+    props: [{ type: "cone", x: 70, y: 60 }, { type: "cone", x: 150, y: 50 }, { type: "cone", x: 230, y: 70 }, { type: "cone", x: 90, y: 140 }, { type: "cone", x: 200, y: 150 }, { type: "cone", x: 150, y: 110 }],
+    labels: [{ text: "Stromy = kužílky", x: 150, y: 13 }],
+    signals: [[2, "target", "Dřevorubci kácí stromy (otáčí kužílky)", 3.5], [9, "target", "Krakonoši stromy ošetřují (obrací zpět)", 3.5]],
+    captions: [[0, "Modří = dřevorubci, červení = Krakonoši"]] },
+
+  { drill: "Krokodýli", template: "cross", ball: true, runners: 6, catchers: 2, catcherLabel: "Krokodýl", effect: "join", effectLabel: "Nový krokodýl",
+    zone: [120, 180], zones: [{ x: 120, y: 22, w: 60, h: 158, color: "water", label: "Řeka", ly: 190 }],
+    labels: [{ text: "Břeh", x: 50, y: 13 }, { text: "Druhý břeh", x: 250, y: 13 }],
+    field: { label: "" }, runCaption: "Převést míč přes řeku, krokodýli vykopávají" },
+
+  { drill: "Kuba řekl (s míčem)", template: "dribble", players: 7, coachLabel: "Trenér", field: { label: "Čtverec 15 × 15 m" },
+    signals: [[3, "stop", "„Kuba řekl: zastav míč podrážkou!“", 2.5, null, "Kuba řekl: stop!"], [8, "sit", "„Kuba řekl: sedni si na míč!“", 2.5, null, "Kuba řekl: sedni!"]],
+    captions: [[0, "Děti vedou míč a sledují trenéra"], [12, "Povel bez „Kuba řekl“ se neplní – kdo splní, 3 dotyky"]] },
+
+  { drill: "Kyvadlová rozcvička ve dvojicích", template: "relay", lanes: 3, perLane: 3, x0: 70, x1: 230, leg: 3, turnLabel: "Protější zástup",
+    caption: "Přeběhnout na druhou stranu, plácnout dalšího",
+    captions: [[0, "Přeběhnout na druhou stranu, zařadit se do zástupu"], [9, "Trenér mění způsob pohybu, nakonec závod"]] },
+
+  { drill: "Lanová dráha", template: "course", ball: false, players: 4, gap: 2,
+    zones: [{ x: 22, y: 24, w: 256, h: 70, color: "green", label: "Les", lx: 270, ly: 34 }],
+    path: [[30, 60, "run", "Start"], [70, 60, "jump", "Kmen", -26], [120, 60, "run"], [150, 60, "run", "Vodopád", -26], [185, 60, "crawl"], [215, 60, "run", "Spadlý strom", -26], [250, 60, "run"], [250, 145, "zigzag"], [40, 145, "run", "Slalom mezi stromy", 18]],
+    props: [{ type: "rope", x: 85, y: 44, x2: 85, y2: 78 }, { type: "rope", x: 150, y: 42, x2: 150, y2: 80 }, { type: "rope", x: 200, y: 44, x2: 200, y2: 78 },
+      { type: "cone", x: 210, y: 145 }, { type: "cone", x: 170, y: 145 }, { type: "cone", x: 130, y: 145 }, { type: "cone", x: 90, y: 145 },
+      { type: "flag", x: 150, y: 110, label: "Shrek (trenér) chytá", ly: 124 }],
+    captions: [[0, "Zvířátka probíhají lesem: přes kmen, pod vodopádem"], [5, "Podlézt spadlý strom, zpět slalomem"], [10, "Nenechat se chytit Shrekem, nedotknout se lana"]] },
+
+  { drill: "Mamuti a lovci", template: "tag", runners: 6, chasers: 3, chaserColor: "orange", runnerColor: "purple", chaserLabel: "Lovec", effect: "sit", effectLabel: "Trefen!",
+    labels: [{ text: "Fialoví = mamuti", x: 150, y: 13, color: "purple" }],
+    idleCaption: "Mamuti se pohybují, lovci je trefují měkkým míčem",
+    catchCaption: "Lovec trefil mamuta (hod rukou nebo kop) – počítá body" },
+
+  { drill: "Medvěd", template: "exercise", players: 6, cols: 3, poses: ["low", "stand"], move: true, every: 3,
+    poseLabels: { low: "Medvěd: na čtyřech, záda rovně, dýchat do břicha", stand: "Krátký oddech" }, coachTag: "Trenér kontroluje" },
+
+  { drill: "Medvídek", template: "exercise", players: 6, cols: 3, poses: ["down", "stand"], every: 3, mats: true,
+    poseLabels: { down: "Medvídek: kolečko na obě strany (5–10×)", stand: "Krátký oddech" }, coachTag: "Kdo ukáže nejlepšího medvídka?" },
+
+  { drill: "Minipřípravka U7 – hra", template: "smallgame", n: 3, field: { label: "Hřiště 25 × 15 m" },
+    goals: [[22, 100, 180, "blue", 18], [278, 100, 0, "red", 18]] },
+
+  { drill: "Molekuly a atomy", template: "dribble", ball: false, twoTeams: true, players: 8,
+    props: [{ type: "hoop", x: 70, y: 60, color: "blue", label: "Modrý domeček", ly: 40 }, { type: "hoop", x: 230, y: 60, color: "red", label: "Červený domeček", ly: 40 },
+      { type: "hoop", x: 62, y: 140, color: "yellow", label: "Žlutý domeček", ly: 160 }, { type: "hoop", x: 238, y: 140, color: "green", label: "Zelený domeček", ly: 160 }],
+    signals: [[3, "target", "Trenér volá číslo – děti tvoří molekuly", 3, null, "Dvojice!"], [9, "target", "Trenér volá barvu – všichni do domečku", 3, null, "Modrý domeček!"]],
+    captions: [[0, "Hra na babu v prostoru"]] },
+
+  { drill: "Mořeplavci a piráti", template: "tag", ball: true, effect: "join", chasers: 2, runners: 7, chaserLabel: "Pirát", effectLabel: "Nový pirát",
+    field: { label: "Hřiště 20 × 20 m" }, idleCaption: "Mořeplavci vedou míč a kličkují, piráti berou míče",
+    catchCaption: "Kdo přijde o míč, stává se pirátem" },
+
+  { drill: "Na šreka", template: "approach", players: 6, ball: false, leaderLabel: "Šrek",
+    labels: [{ text: "Start", x: 30, y: 13 }, { text: "Cíl", x: 272, y: 13 }] },
+
+  { drill: "Na zvířátka", template: "tag", effect: "join", chasers: 1, runners: 7, chaserLabel: "Tygr", effectLabel: "Nový tygr",
+    idleCaption: "Chytač se pohybuje jako zvířátko (opice, tygr…)",
+    catchCaption: "Chycený se stává zvířátkem, které ho chytlo" },
+
+  { drill: "Obratnostně-dovednostní cvičení s míčem", template: "dribble", players: 6, coach: false,
+    captions: [[0, "Koordinace, obratnost a dovednosti s míčem – viz video"]] },
+
+  { drill: "Obratnostní cvičení a gymnastika", template: "course", ball: false, players: 4, gap: 2.4,
+    path: [[30, 100, "run", "Start"], [65, 100, "roll", "Kotoul", -30], [105, 100, "run"], [145, 100, "roll", "Válení sudů", -30], [185, 100, "run"], [215, 100, "bear", "Zvířecí chůze", -30], [260, 100, "run"]],
+    props: [{ type: "mat", x: 60, y: 90, w: 50, h: 20 }, { type: "mat", x: 140, y: 90, w: 50, h: 20 }],
+    captions: [[0, "Stanoviště obratnosti na žíněnkách či trávě"], [6, "Zpevněné tělo, bezpečnost na prvním místě"]] },
+
+  { drill: "Ostrov (Die Insel)", template: "dribble", players: 8, coachLabel: "Trenér", field: { label: "Čtverec 20 × 20 m" },
+    zones: [{ x: 22, y: 24, w: 256, h: 154, color: "water", label: "Moře", lx: 48, ly: 36 }, { x: 118, y: 76, w: 64, h: 50, color: "green", label: "Ostrov", ly: 70 }],
+    signals: [[5, "gather", "Signál! Všichni s míčem na ostrov", 4, [150, 96], "Na ostrov!"]],
+    captions: [[0, "Děti vedou míč v moři kolem ostrova"], [9, "Průběžně nové úkoly, ostrov se může zmenšit"]] },
+]);
+
+window.ANIM_SPECS = (window.ANIM_SPECS || []).concat([
+  { drill: "Ostrováci", template: "tag", effect: "home", chasers: 1, runners: 6, chaserLabel: "Žralok", chaserColor: "black",
+    zones: [{ x: 20, y: 22, w: 260, h: 158, color: "water", label: "Moře", lx: 150, ly: 174 }],
+    props: [{ type: "hoop", x: 60, y: 55, label: "Ostrov" }, { type: "hoop", x: 240, y: 55, label: "Ostrov" }, { type: "hoop", x: 150, y: 100, label: "Ostrov" }, { type: "hoop", x: 70, y: 150, label: "Ostrov" }, { type: "hoop", x: 230, y: 150, label: "Ostrov" }],
+    effectLabel: "Na ostrově", idleCaption: "Žralok (trenér) plave mezi ostrovy", catchCaption: "Na povel „utíkejte“ běží každý na jiný ostrov" },
+
+  { drill: "Ostrovy", template: "dribble", players: 7, field: { label: "Moře 20 × 20 m" },
+    props: [{ type: "hoop", x: 60, y: 55, label: "Ostrov" }, { type: "hoop", x: 240, y: 55, label: "Ostrov" }, { type: "hoop", x: 150, y: 100, label: "Ostrov" }, { type: "hoop", x: 70, y: 150, label: "Ostrov" }, { type: "hoop", x: 230, y: 150, label: "Ostrov" }],
+    signals: [[4, "target", "Signál: rychle na ostrov, zastavit podrážkou", 3.5, null, "Na ostrov!"], [11, "target", "Trenér ubírá ostrovy nebo určí barvu", 3.5, null, "Ostrov!"]],
+    captions: [[0, "Děti vedou míč po moři, hlava nahoře"]] },
+
+  { drill: "Pac-Man", template: "tag", effect: "join", ball: true, chaserBall: true, chasers: 1, chaserColor: "yellow", chaserLabel: "Pac-Man", effectLabel: "Nový Pac-Man",
+    field: { label: "Čtverec 20 × 20 m" }, idleCaption: "Pac-Man míčem trefuje míče ostatních", catchCaption: "Trefený hráč se stává také Pac-Manem" },
+
+  { drill: "Piráti a plavčíci", template: "tag", effect: "freeze", ball: true, chasers: 2, chaserLabel: "Pirát", chaserColor: "black", effectLabel: "Pomoc!", rescueLabel: "Plavčík",
+    field: { label: "Moře 20 × 20 m" }, idleCaption: "Plavci vedou míč, piráti jim ho vykopávají", catchCaption: "Bez míče volá o pomoc – plavčík mu přinese míč" },
+
+  { drill: "Pirátský ostrov", template: "tag", effect: "home", ball: true, chasers: 2, chaserLabel: "Pirát", chaserColor: "black", runners: 6,
+    field: { label: "Moře 20 × 20 m" },
+    props: [{ type: "hoop", x: 60, y: 60, label: "Ostrov" }, { type: "hoop", x: 240, y: 60, label: "Ostrov" }, { type: "hoop", x: 150, y: 150, label: "Ostrov" }],
+    effectLabel: "Ostrov max 3 s", idleCaption: "Děti vedou míč, piráti je honí", catchCaption: "Na ostrově v bezpečí jen 3 s a jen jedno dítě" },
+
+  { drill: "Pirátský poklad", template: "collect", ball: true, sourceLabel: "Poklad (míče)", field: { label: "20 × 20 m" },
+    teams: [{ color: "blue", home: [50, 55], n: 3, label: "Loď modrých" }, { color: "red", home: [250, 145], n: 3, label: "Loď červených" }],
+    goCaption: "Běží k pokladu pro jeden míč", backCaption: "Míč vedou nohou do své lodi" },
+
+  { drill: "Pohybová školička", template: "course", players: 4, speed: 28,
+    props: [{ type: "hoop", x: 70, y: 150 }, { type: "hoop", x: 95, y: 150 }, { type: "mat", x: 130, y: 92, w: 40, h: 20 }, { type: "hurdle", x: 215, y: 60 }],
+    path: [[30, 150, "run", "Start", -22], [60, 150, "jump", "Skoky obručemi", 20], [110, 150, "run"], [130, 100, "roll", "Válení", 22], [175, 100, "run"], [200, 60, "crawl", "Lezení", -22], [240, 60, "run"], [255, 130, "run", "Cíl"]],
+    captions: [[0, "Dráha: skoky, válení, lezení"], [7, "Všestrannost – trenér ukazuje vzor"]] },
+
+  { drill: "Překážková dráha s míčem", template: "course", ball: true, finish: "shot", goal: [272, 60, 0], players: 4,
+    props: [{ type: "cone", x: 60, y: 150 }, { type: "cone", x: 80, y: 150 }, { type: "cone", x: 100, y: 150 }, { type: "cone", x: 120, y: 150 }, { type: "hoop", x: 165, y: 130 }, { type: "hurdle", x: 205, y: 90 }],
+    path: [[30, 150, "run", "Start", -22], [55, 150, "zigzag", "Slalom", 20], [130, 150, "run"], [165, 130, "run", "Obruč", 18], [190, 100, "hurdle"], [215, 85, "run", "Překážka", -24], [240, 65, "run", "Střela", 16]],
+    captions: [[0, "Slalom, obruč, překážka, střela na branku"]] },
+
+  { drill: "Přetlačovaná", template: "exercise", players: 6, cols: 2, field: { x: 135, y: 22, w: 30, h: 150 }, noField: true,
+    zones: [{ x: 20, y: 22, w: 260, h: 158, color: "#ffffff", dash: "4 3" }], props: [{ type: "rope", x: 150, y: 30, x2: 150, y2: 150 }], labels: [{ text: "Čára", x: 150, y: 13 }], poses: ["push", "push", "stand"], every: 2.5,
+    poseLabels: { push: "Dvojice se přetlačuje – dostat se přes čáru", stand: "Krátký oddech, výměna soupeřů" }, coachTag: "Trenér" },
+
+  { drill: "Přihrávky ve dvojicích brankou", template: "passing", pairs: 3, dist: 80, gates: true,
+    labels: [{ text: "Branka z kuželů", x: 150, y: 40 }], caption: "Přihrávka vnitřní stranou brankou = bod" },
+
+  { drill: "Prkna", template: "exercise", players: 6, cols: 3, poses: ["low", "down"], every: 3, mats: true,
+    poseLabels: { low: "Vzpor ležmo – tělo pevné jako prkno", down: "Přetočit se zády k zemi – stále rovně" } },
+
+  { drill: "Probíhání lesem + hra na myslivce", template: "cross", ball: true, runners: 5, catchers: 2, effect: "back",
+    runnerColor: "red", catcherColor: "green", catcherLabel: "Myslivec", effectLabel: "Chycen – do lesa",
+    field: { x: 20, y: 22, w: 260, h: 128, label: "Hra na myslivce" }, zone: [140, 160], left: 50, right: 250,
+    zones: [{ x: 140, y: 22, w: 20, h: 128, color: "green", label: "Čára myslivců", ly: 144 }, { x: 110, y: 158, w: 80, h: 32, color: "yellow", label: "Žlutý les", ly: 174 }],
+    props: [{ type: "cone", x: 120, y: 166, color: "orange" }, { type: "cone", x: 180, y: 166, color: "orange" }, { type: "cone", x: 150, y: 182, color: "orange" },
+      { type: "minigoal", x: 22, y: 50, ang: 180 }, { type: "minigoal", x: 22, y: 122, ang: 180 }, { type: "minigoal", x: 278, y: 50, ang: 0 }, { type: "minigoal", x: 278, y: 122, ang: 0 }],
+    runCaption: "Proběhnout přes myslivce a zakončit na branku", captions: [] },
+
+  { drill: "Raketová dráha", template: "course", players: 4, finish: "shot", goal: [272, 100, 0], speed: 34,
+    zones: [{ x: 50, y: 80, w: 170, h: 40, color: "purple", label: "Raketová dráha", ly: 72 }],
+    props: [{ type: "ball", x: 100, y: 140 }, { type: "ball", x: 170, y: 60 }, { type: "ball", x: 130, y: 112 }],
+    labels: [{ text: "Trenér hází míče do cesty", x: 110, y: 160 }, { text: "Trenér hází míče do cesty", x: 190, y: 40 }, { text: "Krabice", x: 272, y: 76 }],
+    path: [[30, 100, "run", "Start", 30], [60, 100, "zigzag"], [210, 100, "run"], [240, 100, "run"]],
+    captions: [[0, "Proběhnout dráhu a vyhnout se míčům"], [6, "Na konci trefit krabici – trenér brání"]] },
+
+  { drill: "Reakční rychlost se soubojem 1:1", template: "duel", ball: false, attacker: [130, 100], defender: [170, 100], target: [150, 40], T: 8,
+    props: [{ type: "gate", x: 150, y: 35, w: 20, color: "blue", label: "Modrá branka", lx: 195, ly: 35 }, { type: "gate", x: 150, y: 165, w: 20, color: "red", label: "Červená branka", lx: 198, ly: 165 }],
+    aLabel: "Hráč A", dLabel: "Hráč B", winLabel: "První!", loseLabel: "Pozdě",
+    captions: [[0, "Hráči proti sobě, čekají na signál trenéra"], [1, "Signál „modrá“ – kdo bude první v brance?"]] },
+
+  { drill: "Rovnováha plameňáka", template: "exercise", players: 6, cols: 3, poses: ["stand", "jump", "stand"], every: 3, T: 16, field: { label: "10 × 10 m" },
+    props: [{ type: "ball", x: 91, y: 87 }, { type: "ball", x: 156, y: 87 }, { type: "ball", x: 221, y: 87 }, { type: "ball", x: 91, y: 139 }, { type: "ball", x: 156, y: 139 }, { type: "ball", x: 221, y: 139 }],
+    captions: [[0, "Stoj na jedné noze, druhá na míči 5–10 s"], [4, "Ťukání chodidly střídavě na míč"], [8, "Na jedné noze kutálet míč dokola"], [12, "Se zavřenýma očima, pak druhá noha"]] },
+
+  { drill: "Rychlé 1v1 pro děti 5–12 let", template: "duel", attacker: [45, 100], defender: [250, 70], target: [258, 100], T: 10,
+    props: [{ type: "minigoal", x: 272, y: 100, ang: 0 }, { type: "minigoal", x: 28, y: 100, ang: 180 }],
+    labels: [{ text: "Řada útočníků", x: 40, y: 150 }, { text: "Řada obránců", x: 255, y: 150 }, { text: "Trenér přihraje", x: 70, y: 40 }],
+    field: { x: 20, y: 22, w: 260, h: 158, label: "10 × 15 m" },
+    captions: [[0, "Trenér přihraje útočníkovi, obránce vybíhá naproti"], [2, "Útočník míří na obránce a obejde ho"]] },
+
+  { drill: "Rychlost a střelba v souboji 1:1", template: "duel", attacker: [45, 70], defender: [45, 130], target: [250, 100], T: 10,
+    props: [{ type: "cone", x: 80, y: 60, color: "yellow", label: "Meta", ly: 45 }, { type: "cone", x: 80, y: 140, color: "yellow", label: "Meta", ly: 160 }, { type: "goal", x: 272, y: 100, ang: 0 }],
+    zones: [{ x: 180, y: 60, w: 70, h: 80, color: "orange", label: "Území střelby", ly: 150 }],
+    aLabel: "Hráč 1", dLabel: "Hráč 2", winLabel: "Gól!", loseLabel: "Pozdě",
+    captions: [[0, "Trenér ukáže metu – hráči ji oběhnou"], [2, "Sprint pro míč, vítěz zakončí z území"]] },
+
+  { drill: "Rychlost bez míče a vedení míče v rychlosti", template: "dribble", players: 7, field: { label: "15 × 15 m" },
+    zones: [{ x: 132, y: 84, w: 36, h: 32, color: "yellow", label: "Start", ly: 128 }],
+    props: [{ type: "gate", x: 50, y: 50, color: "red" }, { type: "gate", x: 150, y: 40, color: "blue" }, { type: "gate", x: 250, y: 50, color: "red" }, { type: "gate", x: 50, y: 150, color: "blue" }, { type: "gate", x: 150, y: 146, color: "red" }, { type: "gate", x: 250, y: 150, color: "blue" }],
+    signals: [[3, "stop", "Povel: zastav míč podrážkou", 2, null, "Stop míč!"], [5, "target", "Proběhni co nejvíc branek", 4, null, "Branky!"], [9.5, "gather", "STOP – zpět do startovního čtverce", 3, [150, 96], "STOP!"]],
+    captions: [[0, "Vedení míče, na povel běh brankami"]] },
+
+  { drill: "Rychlost s obratností", template: "relay", lanes: 2, perLane: 4, style: "hop", turnLabel: "Obrátka", x0: 75,
+    props: [{ type: "hurdle", x: 125, y: 75 }, { type: "hurdle", x: 175, y: 75 }, { type: "hurdle", x: 125, y: 127 }, { type: "hurdle", x: 175, y: 127 }],
+    labels: [{ text: "Překážková dráha", x: 150, y: 101 }],
+    caption: "Závod družstev: překážky, plácnout dalšího" },
+
+  { drill: "Rychlostní souboj se zakončením", template: "duel", attacker: [40, 80], defender: [40, 120], target: [240, 100], T: 10,
+    props: [{ type: "cone", x: 110, y: 50, color: "orange", label: "Kuželka", ly: 36 }, { type: "cone", x: 110, y: 150, color: "orange", label: "Kuželka", ly: 166 }, { type: "goal", x: 272, y: 100, ang: 0 }],
+    labels: [{ text: "Trenér přihrává", x: 180, y: 170 }],
+    aLabel: "Hráč 1", dLabel: "Hráč 2", winLabel: "Zakončení!", loseLabel: "Pozdě",
+    captions: [[0, "Na signál závod okolo kuželek"], [2.5, "Trenér pošle míč – první hráč zakončí"]] },
+]);
+
+window.ANIM_SPECS = (window.ANIM_SPECS || []).concat([
+  { drill: "Semafor (červená, zelená)", template: "approach", players: 6, ball: true, leaderLabel: "Semafor", leaderColor: "black",
+    field: { label: "Hřiště 20 × 15 m" }, labels: [{ text: "Start", x: 34, y: 190 }],
+    goCaption: "Zelená – děti vedou míč k semaforu (trenérovi)", stopCaption: "Červená – zastavit míč podrážkou, kdo se hýbe, jde zpět" },
+
+  { drill: "Skřítci a příšery", template: "collect", ball: false, source: [150, 82], sourceLabel: "Jeskyně s pokladem",
+    teams: [{ color: "blue", home: [48, 48], n: 2, label: "Modrý kruh" }, { color: "yellow", home: [252, 48], n: 2, label: "Žlutý kruh" }, { color: "red", home: [150, 160], n: 2, label: "Červená branka" }],
+    defenders: 2, defenderLabel: "Příšera", defenderColor: "purple",
+    captions: [[0, "Skřítci běží do jeskyně pro poklad"], [4, "Poklad třídí do kruhů a branek podle barvy"], [8, "Příšery chytají – chycený skřítek zmrzne"], [12, "Zmrzlého osvobodí kamarád (podlezením, přeskočením)"]] },
+
+  { drill: "Souboje o míč", template: "exercise", players: 4, cols: 2, poses: ["push", "stand"], every: 3,
+    field: { x: 100, y: 40, w: 100, h: 120, label: "Dvojice, každá drží 1 míč" },
+    props: [{ type: "ball", x: 150, y: 90 }, { type: "ball", x: 150, y: 130 }],
+    poseLabels: { push: "Oba drží míč – kdo ho vytrhne jen pro sebe?", stand: "Pauza – další kolo v sedu nebo v leže" },
+    coachTag: "Trenér: kdo řekne stop, pustím" },
+
+  { drill: "Střelba U6–U8 z vedení míče", template: "shooting", queue: [50, 150], via: [[110, 125], [185, 105]], goal: [272, 100, 0], shooters: 4,
+    field: { label: "15 × 20 m + branka" },
+    props: [{ type: "cone", x: 40, y: 168, label: "Start – 2 řady", ly: 182 }, { type: "cone", x: 190, y: 70 }, { type: "cone", x: 190, y: 140, label: "Střelecká čára", ly: 156 }],
+    captions: [[0, "Vede míč ke střelecké čáře a vystřelí na branku"], [6, "Doběhne si pro míč a zařadí se do druhé řady"]] },
+
+  { drill: "Střelba ve fotbalové školičce", template: "shooting", queue: [60, 140], via: [[130, 118], [185, 105]], goal: [265, 100, 0], goalW: 20, keeper: true, shooters: 4,
+    field: { label: "15 × 10 m" }, props: [{ type: "cone", x: 145, y: 104, color: "orange", label: "Klobouček", ly: 90 }],
+    captions: [[0, "Vede míč ke kloboučku a střílí na malou branku"], [6, "Střídat pravou a levou nohu, v brance může být trenér"]] },
+
+  { drill: "Střelecké hry pro U5–U8", template: "shooting", queue: [70, 130], via: [[140, 115], [195, 100]], goal: [270, 100, 0], shooters: 4,
+    field: { label: "20 × 20 m + branka" }, zones: [{ x: 26, y: 100, w: 70, h: 60, color: "blue", label: "Vymezený prostor", ly: 94 }],
+    captions: [[0, "Vede míč z vymezeného prostoru a střílí na branku"], [6, "Vrátí se a hraje znovu – trenér počítá góly"]] },
+
+  { drill: "Trénink 4 na 4 ve školičce", template: "smallgame", n: 4, labels: [{ text: "25 × 20 m, malé branky", x: 150, y: 193 }],
+    goals: [[22, 101, 180, "blue", 16], [278, 101, 0, "red", 16]],
+    captions: [[0, "4 na 4 bez brankáře – rozestoupit se a kličkovat"], [6, "Po ztrátě hned zpátky"], [8, "Červení útočí – trenér rychle doplní míč"]] },
+
+  { drill: "Trénink U5 a U7 – FBŠ Slavia Plzeň", template: "smallgame", n: 3, labels: [{ text: "Menší hřiště 25 × 20 m", x: 150, y: 193 }],
+    goals: [[22, 60, 180, "blue", 16], [22, 142, 180, "blue", 16], [278, 60, 0, "red", 16], [278, 142, 0, "red", 16]],
+    captions: [[0, "Závěrečná hra v malém počtu – pořád v pohybu"], [8, "Více branek = víc gólů a víc radosti"]] },
+
+  { drill: "Uklízecí hra", template: "dribble", players: 8, twoTeams: true, coachAt: [150, 190],
+    field: { label: "20 × 20 m, 2 poloviny" },
+    zones: [{ x: 20, y: 22, w: 130, h: 158, color: "blue", label: "Polovina modrých", ly: 34 }, { x: 150, y: 22, w: 130, h: 158, color: "red", label: "Polovina červených", ly: 34 }],
+    captions: [[0, "Na signál „uklízejí“ – míče na polovinu soupeře"]],
+    signals: [[11, "stop", "Hvizd! Vyhrává tým s méně míči na své polovině", 4, null, "Konec!"]] },
+
+  { drill: "Utkání 4+1 (herní koncepce U6–U7)", template: "smallgame", n: 4,
+    goals: [[22, 101, 180, "blue", 26], [278, 101, 0, "red", 26]],
+    labels: [{ text: "Střídačka", x: 70, y: 193 }, { text: "cca 35 × 25 m, branky 3 × 2 m", x: 200, y: 193 }],
+    captions: [[0, "4+1 proti 4+1 – všichni hrají stejně dlouho"], [8, "Časté střídání, každý si zahraje i v brance"]] },
+
+  { drill: "Včelky medonosky", template: "collect", ball: true, source: [150, 45], sourceLabel: "Pyl (barevné mety)",
+    zones: [{ x: 70, y: 120, w: 160, h: 52, color: "yellow", label: "Úl", lx: 150, ly: 186 }],
+    teams: [{ color: "blue", home: [105, 146], n: 3, label: "Modrá část" }, { color: "red", home: [195, 146], n: 3, label: "Červená část" }],
+    props: [{ type: "gate", x: 150, y: 98, w: 30, color: "orange", label: "Branka – rodič brání", lx: 222, ly: 100 }],
+    captions: [[0, "Včelky s míčem vylétnou z úlu brankou"], [5, "Rodič v brance roztaženýma rukama ztěžuje průlet"], [9, "Pyl odnesou do úlu na místo své barvy"]] },
+
+  { drill: "Vedení – obrat – výbuch", template: "relay", lanes: 3, perLane: 3, ball: true, x0: 60, x1: 230, turnLabel: "Kužel – obrat",
+    field: { label: "15 × 10 m" }, caption: "Vede ke kuželu, obrat podrážkou a rychle zpět („výbuch“)" },
+
+  { drill: "Vlk a beránek", template: "cross", ball: true, runners: 6, catchers: 2, catcherLabel: "Vlk", effect: "join", effectLabel: "Nový vlk",
+    field: { label: "20 × 15 m" }, zone: [100, 200],
+    zones: [{ x: 20, y: 22, w: 26, h: 158, color: "green", label: "Ohrada", ly: 190 }, { x: 254, y: 22, w: 26, h: 158, color: "green", label: "Ohrada", ly: 190 }],
+    labels: [{ text: "Louka", x: 150, y: 190 }],
+    runCaption: "Beránci vedou míč přes louku, vlci ho vykopávají" },
+
+  { drill: "Zábavné hry pro školičky – honička s míčem", template: "tag", effect: "swap", ball: true, chaserBall: true, chasers: 2, runners: 6,
+    chaserLabel: "Honič", field: { label: "Čtverec 20 × 20 m" },
+    idleCaption: "Honiči s míčem u nohy honí děti, které vedou míč", catchCaption: "Chycený si vymění roli s honičem" },
+
+  { drill: "Závod o míč 1v1 (Race Time)", template: "duel", attacker: [45, 80], defender: [45, 125], target: [250, 100],
+    props: [{ type: "goal", x: 268, y: 100, ang: 0 }, { type: "cone", x: 30, y: 60, label: "Řada A", ly: 48 }, { type: "cone", x: 30, y: 150, label: "Řada B", ly: 166 }],
+    aLabel: "Rychlejší útočí", dLabel: "Druhý brání", field: { label: "20 × 15 m + branka" },
+    captions: [[0, "Trenér zahraje míč dopředu – první z obou řad vyběhnou"], [1.5, "Kdo je u míče první, útočí na branku, druhý brání"], [6, "Po zakončení na konec opačné řady"]] },
+
+  { drill: "Závody lodí", template: "relay", lanes: 2, perLane: 4, ball: false, x0: 60, x1: 200, turnLabel: "Loď (žíněnka)",
+    props: [{ type: "mat", x: 196, y: 64, w: 26, h: 22 }, { type: "mat", x: 196, y: 117, w: 26, h: 22 }, { type: "flag", x: 262, y: 70 }, { type: "flag", x: 262, y: 122, label: "Cíl", ly: 146 }],
+    caption: "Doběhne, skočí šipku do lodě, posune ji a běží plácnout dalšího" },
+
+  { drill: "Zmrazovaná s míčem", template: "tag", effect: "freeze", ball: true, chasers: 2, runners: 7, chaserLabel: "Honič",
+    effectLabel: "Zmrzlý", rescueLabel: "Prokopne mezi nohama", field: { label: "Čtverec 15 × 15 m" },
+    catchCaption: "Zmrzlý drží míč nad hlavou – kamarád mu prokopne míč mezi nohama" },
+
+  { drill: "Zoo", template: "dribble", players: 7, coachAt: [255, 190], field: { label: "Zoo 20 × 20 m" },
+    props: [{ type: "hoop", x: 60, y: 60, label: "Klec", ly: 80 }, { type: "hoop", x: 240, y: 60, label: "Klec", ly: 80 }, { type: "hoop", x: 150, y: 150, label: "Klec", lx: 180, ly: 154 }],
+    captions: [[0, "Had – vedení míče kličkováním"], [4, "Slon – kopnout silně a doběhnout"]],
+    signals: [[8, "target", "Krmení! Dovést míč do klece", 5, null, "Krmení!"]] },
+
+  { drill: "Zpracování a obrat", template: "passing", pairs: 2, dist: 110, every: 2, field: { label: "15 × 10 m" }, color: "black", color2: "blue",
+    props: [{ type: "gate", x: 250, y: 64, w: 22, label: "Branka z kuželů", ly: 38 }, { type: "gate", x: 250, y: 127, w: 22 }],
+    labels: [{ text: "Přihrávač", x: 95, y: 190 }, { text: "Hráč u kužele", x: 205, y: 190 }],
+    caption: "Přihrávka – zpracovat, otočit se a projet branku z kuželů" },
+
+  { drill: "Žraloci a rybičky", template: "cross", ball: true, runners: 6, catchers: 2, catcherLabel: "Žralok", effect: "join", effectLabel: "Nový žralok",
+    field: { label: "Oceán 20 × 15 m" }, zones: [{ x: 20, y: 22, w: 260, h: 158, color: "water", label: "Oceán", lx: 150, ly: 190 }],
+    runCaption: "„Žraloci jdou!“ – rybičky vedou míč na druhou stranu" },
+
+  { drill: "Zvířata", template: "exercise", players: 6, cols: 3, poses: ["low", "down", "stand"], move: true,
+    poseLabels: { low: "Tygr / krab – po čtyřech, zpevněný střed těla", down: "Ještěrka – nízko u země, plynulý pohyb", stand: "Pštros / kachna – napřímená záda" },
+    coachTag: "Trenér ukazuje (viz video)" },
+
+  { drill: "Zvířátka v pohybu", template: "dribble", players: 7, field: { label: "20 × 20 m" },
+    props: [{ type: "cone", x: 90, y: 70 }, { type: "cone", x: 210, y: 70 }, { type: "cone", x: 150, y: 130 }],
+    captions: [[0, "Gepard – rychlé vedení míče"]],
+    signals: [[4, "sit", "Krab – pohyb bokem po čtyřech", 3, null, "Krab!"], [9, "stop", "Gorila – dotyky podrážkou na místě", 3, null, "Gorila!"]] },
+]);
+
+/* ===== Šablony animací: každé cvičení = krátká specifikace (ANIM_SPECS) ===== */
+(() => {
+  const C = { blue: "#2563eb", red: "#dc2626", yellow: "#eab308", orange: "#f97316", purple: "#7c3aed", ice: "#7dd3fc", black: "#111827", white: "#f8fafc", pink: "#db2777", green: "#16a34a" };
+  const ZC = { blue: "#2563eb", red: "#dc2626", yellow: "#eab308", water: "#0ea5e9", mat: "#60a5fa", green: "#16a34a", orange: "#f97316", purple: "#7c3aed", gray: "#94a3b8" };
+  const col = c => C[c] || c || C.blue;
+  const hash = (i, k = 1) => { const x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); };
+
+  // ---- společné: hřiště, zóny, pomůcky, popisky, titulky
+  function common(S, sp) {
+    const f = { x: 20, y: 22, w: 260, h: 158, ...(sp.field || {}) };
+    if (!sp.noField) S.area(f.x, f.y, f.w, f.h);
+    if (f.label) S.label(f.label, f.x + f.w / 2, f.y - 9);
+    (sp.zones || []).forEach(z => {
+      const c = ZC[z.color] || z.color || "#fff";
+      S.area(z.x, z.y, z.w, z.h, { fill: c, fo: z.color === "water" ? .25 : .16, stroke: c, dash: z.dash ?? "" });
+      if (z.label) S.label(z.label, z.lx ?? z.x + z.w / 2, z.ly ?? z.y + z.h / 2, z.color === "water" ? "#0369a1" : c);
+    });
+    (sp.props || []).forEach(p => {
+      const c = p.color ? (ZC[p.color] || p.color) : undefined;
+      if (p.type === "cone") S.cone(p.x, p.y, c);
+      else if (p.type === "goal") S.goal(p.x, p.y, p.ang || 0, p.w || 26);
+      else if (p.type === "minigoal") S.goal(p.x, p.y, p.ang || 0, 16);
+      else if (p.type === "ladder") S.ladder(p.x, p.y, p.len || 40);
+      else if (p.type === "hurdle") S.hurdle(p.x, p.y);
+      else if (p.type === "hoop") S.hoop(p.x, p.y, c);
+      else if (p.type === "flag") S.flag(p.x, p.y, c);
+      else if (p.type === "mat") S.mat(p.x, p.y, p.w || 30, p.h || 20, c);
+      else if (p.type === "rope") S.rope(p.x, p.y, p.x2, p.y2);
+      else if (p.type === "gate") { S.cone(p.x, p.y - (p.w || 12) / 2, c); S.cone(p.x, p.y + (p.w || 12) / 2, c); }
+      else if (p.type === "ball") S.ball().set(p.x, p.y);
+      if (p.label) S.label(p.label, p.lx ?? p.x, p.ly ?? p.y + 16);
+    });
+    (sp.labels || []).forEach(l => S.label(l.text, l.x, l.y, l.color ? col(l.color) : undefined));
+    const caps = sp.captions || [];
+    return { f, box: sp.box || [f.x + 12, f.y + 14, f.x + f.w - 12, f.y + f.h - 12], caption: t => { let c = ""; for (const [a, txt] of caps) if (t >= a) c = txt; return c; } };
+  }
+  const near = (a, b, u) => ({ x: a.x + (b.x - a.x) * u, y: a.y + (b.y - a.y) * u });
+  const P = (x, y) => ({ x, y });
+
+  const T = {};
+
+  /* HONIČKA – chytači honí ostatní; efekt chycení: freeze | join | swap | out | sit | tail | home */
+  T.tag = (S, sp) => {
+    const cm = common(S, sp), TT = sp.T || 18, n = sp.runners ?? 7, m = sp.chasers ?? 2, eff = sp.effect || "freeze";
+    const rc = col(sp.runnerColor || "blue"), cc = col(sp.chaserColor || "red");
+    const R = Array.from({ length: n }, (_, i) => ({ k: S.kid(rc, { hair: i % 3 ? "#5b3a1e" : "#111" }), b: sp.ball ? S.ball() : null, w: S.wander(i, cm.box, TT) }));
+    const H = Array.from({ length: m }, (_, i) => ({ k: S.kid(cc, { crown: sp.crown }), b: sp.chaserBall ? S.ball() : null, w: S.wander(i + 11, cm.box, TT) }));
+    const homes = (sp.props || []).filter(p => p.type === "hoop" || p.home);
+    const nev = sp.events ?? 3, ev = Array.from({ length: nev }, (_, i) => ({ c: i % m, r: (i * 3 + 1) % n, te: TT * (i + .7) / (nev + .4) }));
+    const outP = sp.outZone ? P(sp.outZone.x, sp.outZone.y) : P(cm.f.x + cm.f.w / 2, cm.f.y + cm.f.h + 8);
+    return { T: TT, caption: t => cm.caption(t) || (() => {
+      for (const e of ev) if (t > e.te - 1.4 && t < e.te + 2.4) return sp.catchCaption || ({ freeze: "Chycený zmrzne – spoluhráč ho osvobodí dotykem", join: "Chycený se přidává k chytačům", swap: "Chycený se stává chytačem", out: "Chycený plní úkol mimo hřiště a vrací se", sit: "Chycený splní úkol a hraje dál", tail: "Chytač sebral ocásek", home: "V domečku se hráč může na 3 s schovat" })[eff];
+      return sp.idleCaption || "Chytači honí, ostatní utíkají";
+    })(), update(t) {
+      const pos = R.map(o => o.w(t)), st = R.map(() => ({ color: rc, tail: eff === "tail" })), hp = H.map(o => o.w(t)), hs = H.map(() => ({ tag: sp.chaserLabel || "Chytač", color: cc }));
+      for (const e of ev) {
+        const P0 = R[e.r].w(e.te);
+        const u = S.ramp(t, e.te - 1.4, e.te) * (1 - S.ramp(t, e.te + .3, e.te + 1.6));
+        const vp = R[e.r].w(Math.min(t, e.te));
+        if (eff !== "home") hp[e.c] = near(hp[e.c], P(vp.x + 7, vp.y), u);
+        if (eff === "freeze" && t >= e.te && t < e.te + 3.2) {
+          pos[e.r] = P0; st[e.r] = { ...st[e.r], frozen: true, moving: false, tag: sp.effectLabel || "Zmrazený" };
+          const rs = (e.r + 2) % n, ur = S.ramp(t, e.te + 1.4, e.te + 3) * (1 - S.ramp(t, e.te + 3.2, e.te + 4.2));
+          pos[rs] = near(R[rs].w(t), P(P0.x - 9, P0.y), ur); if (ur > .9) st[rs].tag = sp.rescueLabel || "Osvobozuje";
+        } else if (eff === "freeze" && t >= e.te + 3.2 && t < e.te + 4.2) pos[e.r] = near(P0, R[e.r].w(e.te + 4.2), S.ease(t - e.te - 3.2));
+        if ((eff === "out" || eff === "sit" || eff === "tail") && t >= e.te && t < e.te + 5) {
+          const dst = eff === "sit" && !sp.outZone ? P0 : outP;
+          let p;
+          if (t < e.te + 1.5) p = near(P0, dst, S.ease((t - e.te) / 1.5));
+          else if (t < e.te + 3.5) p = dst;
+          else p = near(dst, R[e.r].w(e.te + 5), S.ease((t - e.te - 3.5) / 1.5));
+          pos[e.r] = p; const doing = t >= e.te + 1.5 && t < e.te + 3.5;
+          st[e.r] = { ...st[e.r], low: doing && sp.taskPose === "low", jump: doing && sp.taskPose !== "low", tag: doing ? (sp.effectLabel || "Úkol") : null, tail: eff === "tail" ? t >= e.te + 3.2 : false };
+          if (eff === "tail" && t < e.te + 2) hs[e.c].tag = "Mám ocásek!";
+        }
+        if (eff === "home" && homes.length) {
+          const h = homes[e.r % homes.length], HP = P(h.x, h.y);
+          const ui = S.ramp(t, e.te - 1.2, e.te) * (1 - S.ramp(t, e.te + 3, e.te + 4));
+          if (ui > 0) { pos[e.r] = near(R[e.r].w(t), HP, ui); if (ui > .95) st[e.r] = { ...st[e.r], moving: false, tag: sp.effectLabel || "Domeček 1-2-3" }; }
+          const uc = S.ramp(t, e.te - 1.6, e.te - .2) * (1 - S.ramp(t, e.te + .5, e.te + 2));
+          hp[e.c] = near(hp[e.c], P(HP.x + 16, HP.y - 4), uc);
+        }
+        if ((eff === "join" || eff === "swap") && t >= e.te) {
+          st[e.r] = { ...st[e.r], color: cc, tag: t < e.te + 2 ? (sp.effectLabel || sp.chaserLabel || "Chytač") : null };
+          if (eff === "swap" && t < e.te + 3) { hs[e.c] = { color: rc, tag: t < e.te + 2 ? "Utíká" : null }; }
+          else if (eff === "swap") hs[e.c] = { color: rc, tag: null };
+        }
+      }
+      R.forEach((o, i) => { o.k.set(pos[i].x, pos[i].y, st[i]); if (o.b) { const f = S.foot(o.k); o.b.set(st[i].frozen || st[i].jump || st[i].low ? pos[i].x + 3 : f[0], (st[i].frozen || st[i].jump || st[i].low ? pos[i].y + 12 : f[1])); } });
+      H.forEach((o, i) => { o.k.set(hp[i].x, hp[i].y, hs[i]); if (o.b) { const f = S.foot(o.k); o.b.set(f[0], f[1]); } });
+    } };
+  };
+
+  /* PŘEBÍHÁNÍ – hráči přebíhají z břehu na břeh, chytači v prostřední zóně */
+  T.cross = (S, sp) => {
+    const cm = common(S, sp), rounds = sp.rounds || 3, RT = 5.5, TT = rounds * RT;
+    const L = sp.left ?? cm.f.x - 4, Rr = sp.right ?? cm.f.x + cm.f.w + 4, n = sp.runners ?? 6, m = sp.catchers ?? 1;
+    const z = sp.zone || [cm.f.x + cm.f.w * .35, cm.f.x + cm.f.w * .65];
+    const rc = col(sp.runnerColor || "blue"), cc = col(sp.catcherColor || "red");
+    const lanes = Array.from({ length: n }, (_, i) => cm.f.y + 14 + i * (cm.f.h - 28) / Math.max(1, n - 1));
+    const run = lanes.map((y, i) => ({ k: S.kid(rc), b: sp.ball ? S.ball() : null, y, caught: (i * 2 + 1) % (rounds + 1) < rounds ? (i * 2 + 1) % (rounds + 1) : null }));
+    // v každém kole max. 2 chycení
+    const catchers = Array.from({ length: m }, (_, j) => ({ k: S.kid(cc, { crown: sp.crown }), b: sp.catcherBall ? S.ball() : null, y0: cm.f.y + cm.f.h * (j + 1) / (m + 1) }));
+    return { T: TT, caption: t => cm.caption(t) || (() => { const lt = t % RT; return lt < .8 ? "Čekají na povel" : lt < 4 ? (sp.runCaption || "Probíhají na druhou stranu, chytači je loví") : (sp.effect === "back" ? "Chycený se vrací na start" : "Chycený se přidává k chytačům"); })(), update(t) {
+      const r = Math.min(rounds - 1, Math.floor(t / RT)), lt = t - r * RT, dirL = r % 2 === 0;
+      const x0 = dirL ? L : Rr, x1 = dirL ? Rr : L, u = S.ease(S.ramp(lt, .8, 3.8));
+      const midX = (z[0] + z[1]) / 2;
+      run.forEach((o, i) => {
+        const isC = sp.effect !== "back" && o.caught !== null && o.caught < r;
+        if (isC) { const cy = o.y + Math.sin(t * 2.5 + i) * 8 * (lt > .8 && lt < 3.8); o.k.set(midX + (i % 2 ? 10 : -10), cy, { color: cc, tag: null }); if (o.b) o.b.set(-20, -20, false); return; }
+        let x = x0 + (x1 - x0) * u, y = o.y + Math.sin(u * Math.PI * 3 + i) * 8 * (u > 0 && u < 1), st = { color: rc };
+        if (o.caught === r) { const cu = .5; if (u >= cu) { x = x0 + (x1 - x0) * cu; y = o.y + Math.sin(cu * Math.PI * 3 + i) * 8; st = { color: lt > 3.9 && sp.effect !== "back" ? cc : rc, moving: false, tag: lt < 4.6 ? (sp.effectLabel || "Chycen!") : null }; if (sp.effect === "back" && lt > 3.8) { x = x0; } } }
+        o.k.set(x, y, st); if (o.b) { const f = S.foot(o.k); o.b.set(f[0], f[1], true); }
+      });
+      catchers.forEach((c, j) => {
+        const tgt = run.find((o, i) => o.caught === r && i % m === j);
+        const ty = tgt && lt > .8 && lt < 3.8 ? tgt.k.y : c.y0;
+        c.k.set(midX + (j - (m - 1) / 2) * 14, ty, { tag: sp.catcherLabel || "Chytač" }); if (c.b) { const f = S.foot(c.k); c.b.set(f[0], f[1]); }
+      });
+    } };
+  };
+
+  /* VEDENÍ MÍČE V PROSTORU + povely trenéra */
+  T.dribble = (S, sp) => {
+    const cm = common(S, sp), TT = sp.T || 16, n = sp.players ?? 8;
+    const pc = col(sp.color || "blue");
+    const K = Array.from({ length: n }, (_, i) => ({ k: S.kid(i % 4 === 3 && sp.twoTeams ? col("red") : pc), b: sp.ball === false ? null : S.ball(), w: S.wander(i, cm.box, TT) }));
+    const coach = sp.coach === false ? null : S.kid(C.black, { cap: true });
+    const cp = sp.coachAt || [cm.f.x + cm.f.w / 2, cm.f.y + cm.f.h + 6];
+    const targets = (sp.props || []).filter(p => ["cone", "gate", "hoop", "minigoal"].includes(p.type));
+    const sig = sp.signals || [];
+    return { T: TT, caption: t => { let c = cm.caption(t); for (const s of sig) if (t >= s[0] && t < s[0] + (s[3] || 2.5)) c = s[2] || c; return c || "Každý vede svůj míč, hlava nahoře"; }, update(t) {
+      const act = sig.find(s => t >= s[0] && t < s[0] + (s[3] || 2.5));
+      K.forEach((o, i) => {
+        let p = o.w(t), st = {};
+        if (act) {
+          const u = S.ramp(t, act[0], act[0] + .8);
+          if (act[1] === "stop") { p = o.w(act[0]); st = { moving: false }; }
+          else if (act[1] === "sit") { p = o.w(act[0]); st = { low: true, moving: false }; }
+          else if (act[1] === "gather") { const g = act[4] || [cm.f.x + 20, cm.f.y + 20]; p = near(o.w(t), P(g[0] + (i % 4) * 8 - 12, g[1] + Math.floor(i / 4) * 10), u); }
+          else if (act[1] === "target" && targets.length) { const tg = targets[(i + Math.floor(act[0])) % targets.length]; p = near(o.w(t), P(tg.x + 8 * Math.cos(t * 3 + i), tg.y + 8 * Math.sin(t * 3 + i)), u); }
+          else if (act[1] === "swap") { const j = (i + 1) % n; p = near(o.w(t), K[j].w(t), Math.sin(u * Math.PI) * .5); }
+        }
+        o.k.set(p.x, p.y, st); if (o.b) { const f = S.foot(o.k); o.b.set(st.moving === false ? p.x + 3 : f[0], st.moving === false ? p.y + 12 : f[1]); }
+      });
+      if (coach) coach.set(cp[0], cp[1], { moving: false, tag: act && act[5] ? act[5] : (act ? "Povel!" : sp.coachLabel || "Trenér"), jump: false });
+    } };
+  };
+
+  /* SBÍRÁNÍ – hráči nosí předměty ze zdroje do svých domečků */
+  T.collect = (S, sp) => {
+    const cm = common(S, sp), TT = sp.T || 16, src = sp.source || [150, 100];
+    const teams = sp.teams || [{ color: "blue", home: [45, 45], n: 3 }, { color: "red", home: [255, 155], n: 3 }];
+    S.el("circle", { cx: src[0], cy: src[1], r: 16, fill: "#f2b705", "fill-opacity": .18, stroke: "#f2b705", "stroke-width": 1.5 }, S.L.field);
+    if (sp.sourceLabel !== null) S.label(sp.sourceLabel || "Poklad", src[0], src[1] + 24, "#8a5a00");
+    const items = Array.from({ length: 8 }, (_, i) => { const a = i / 8 * 6.283; const e = S.el("path", { d: "M-3.5 2.5 Q0 -4 3.5 2.5 Z", fill: "#f2b705", stroke: "#b88700", "stroke-width": .6, transform: `translate(${src[0] + Math.cos(a) * 9},${src[1] + Math.sin(a) * 9})` }, S.L.stuff); return e; });
+    teams.forEach(tm => { if (tm.zone !== false) { S.area(tm.home[0] - 18, tm.home[1] - 18, 36, 36, { fill: col(tm.color), fo: .15, stroke: col(tm.color), dash: "", rx: 5 }); S.label(tm.label || (tm.color === "red" ? "Domeček červených" : "Domeček modrých"), tm.home[0], tm.home[1] + (tm.home[1] < 100 ? 26 : -26), col(tm.color)); } });
+    const P2 = []; teams.forEach((tm, ti) => { for (let i = 0; i < (tm.n || 3); i++) P2.push({ tm, k: S.kid(col(tm.color)), b: sp.ball ? S.ball() : null, d: (P2.length) * .8, off: (i - 1) * 9 }); });
+    const D = Array.from({ length: sp.defenders || 0 }, (_, i) => ({ k: S.kid(col(sp.defenderColor || "black")), w: S.wander(i + 20, [src[0] - 40, src[1] - 40, src[0] + 40, src[1] + 40], TT) }));
+    return { T: TT, caption: t => cm.caption(t) || (t % 8 < 4 ? (sp.goCaption || "Běží pro poklad") : (sp.backCaption || "S pokladem zpět do domečku")), update(t) {
+      let taken = 0;
+      P2.forEach((p, i) => {
+        const home = [p.tm.home[0] + p.off, p.tm.home[1]], cyc = 6.4, lt = ((t - p.d) % cyc + cyc) % cyc;
+        let pos, carry = false, tgt = src;
+        if (t < p.d) pos = home;
+        else if (lt < 2.6) pos = S.lerp(home, src, S.ease(lt / 2.6) * .78);
+        else if (lt < 3.2) pos = S.lerp(home, src, .78);
+        else { pos = S.lerp(S.lerp(home, src, .78), home, S.ease((lt - 3.2) / 3.2)); carry = lt < 6.3; tgt = home; }
+        if (t >= p.d) taken += Math.floor((t - p.d + cyc - 3) / cyc);
+        p.k.set(pos[0], pos[1], { carry }); if (p.b) { const a = Math.atan2(tgt[1] - pos[1], tgt[0] - pos[0]); p.b.set(pos[0] + Math.cos(a) * 7, pos[1] + 11 + Math.sin(a) * 3); }
+      });
+      items.forEach((e, i) => e.setAttribute("visibility", i < 8 - (taken % 9) ? "visible" : "hidden"));
+      D.forEach(d => { const p = d.w(t); d.k.set(p.x, p.y, { tag: sp.defenderLabel || "Hlídač" }); });
+    } };
+  };
+
+  /* DRÁHA – hráči za sebou prochází stanoviště (path: [[x,y,akce,popisek]]) */
+  T.course = (S, sp) => {
+    const cm = common(S, sp), path = sp.path, n = sp.players ?? 4, gap = sp.gap ?? 2.2;
+    const seg = []; let L = 0; for (let i = 1; i < path.length; i++) { const d = Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]); seg.push({ a: path[i - 1], b: path[i], d, L0: L }); L += d; }
+    const speed = sp.speed || 32, dur = L / speed, TT = sp.T || Math.max(12, dur + gap * n + (sp.finish === "shot" ? 1 : 0));
+    path.forEach(p => { if (p[3]) S.label(p[3], p[0], p[1] + (p[4] ?? 16)); });
+    const goal = sp.goal; if (goal) S.goal(goal[0], goal[1], goal[2] || 0);
+    const pc = col(sp.color || "blue");
+    const K = Array.from({ length: n }, (_, i) => ({ k: S.kid(i % 2 && sp.alt ? col("red") : pc, { hair: i % 2 ? "#111" : "#5b3a1e" }), b: sp.ball ? S.ball() : null, sb: sp.finish === "shot" && !sp.ball ? S.ball() : null }));
+    const at = s => { let d = s * speed; for (const g of seg) { if (d <= g.d) { const u = d / g.d; return { x: g.a[0] + (g.b[0] - g.a[0]) * u, y: g.a[1] + (g.b[1] - g.a[1]) * u, act: g.a[2] || "run", u }; } d -= g.d; } const z = path[path.length - 1]; return { x: z[0], y: z[1], act: "end", u: 1 }; };
+    return { T: TT, caption: t => cm.caption(t) || sp.idleCaption || "Hráči postupně prochází dráhu", update(t) {
+      K.forEach((o, i) => {
+        const lt = ((t - i * gap) % TT + TT) % TT; const p = at(lt);
+        let x = p.x, y = p.y, st = {};
+        if (lt * speed >= L) { const back = S.ramp(lt, dur, dur + 1.2); x = path[path.length - 1][0] + (path[0][0] - path[path.length - 1][0]) * back; y = path[path.length - 1][1] + (path[0][1] + 10 - path[path.length - 1][1]) * back; st.alpha = 1 - Math.sin(back * Math.PI) * .6; if (back >= 1) { x = path[0][0] - 4; y = path[0][1] + 10; st.moving = false; } }
+        if (p.act === "zigzag") x += Math.sin(p.u * Math.PI * 6) * 6, y += Math.sin(p.u * Math.PI * 6) * 6;
+        if (p.act === "hop" || p.act === "hurdle") st.hop = true;
+        if (p.act === "jump") st.jump = true;
+        if (p.act === "crawl" || p.act === "bear") st.low = true;
+        if (p.act === "roll") st.down = true;
+        o.k.set(x, y, st);
+        if (o.b) { const f = S.foot(o.k); const shoot = sp.finish === "shot" && goal && lt * speed >= L; const su = S.ramp(lt, dur, dur + .5); o.b.set(shoot ? f[0] + (goal[0] - f[0]) * su : f[0], shoot ? f[1] + (goal[1] - f[1]) * su : f[1], !(shoot && su >= 1 && lt > dur + 1.2)); }
+      });
+    } };
+  };
+
+  /* ŠTAFETA – zástupy, první běží ke kuželu a zpět, plácne dalšího */
+  T.relay = (S, sp) => {
+    const cm = common(S, sp), lanes = sp.lanes ?? 2, per = sp.perLane ?? 3, TT = sp.T || 14, leg = sp.leg || 3;
+    const x0 = sp.x0 ?? 45, x1 = sp.x1 ?? 235;
+    const ys = Array.from({ length: lanes }, (_, i) => cm.f.y + cm.f.h * (i + 1) / (lanes + 1));
+    ys.forEach(y => { S.cone(x1, y); if (sp.slalom) for (let k = 1; k <= 3; k++) S.cone(x0 + (x1 - x0) * k / 4, y, "#facc15"); });
+    const Q = ys.map((y, li) => Array.from({ length: per }, (_, j) => ({ k: S.kid(col(li % 2 ? "red" : "blue"), { hair: j % 2 ? "#111" : "#5b3a1e" }), b: sp.ball ? S.ball() : null })));
+    if (sp.turnLabel !== null) S.label(sp.turnLabel || "Obrátka", x1, ys[0] - 14);
+    return { T: TT, caption: t => cm.caption(t) || (sp.caption || "Štafeta: tam a zpět, plácnout dalšího"), update(t) {
+      Q.forEach((q, li) => {
+        const y = ys[li], cur = Math.floor(t / leg) % per, lt = t % leg;
+        q.forEach((o, j) => {
+          const qi = (j - cur + per) % per; let x, yy = y, st = {};
+          if (qi === 0) { const u = lt < leg / 2 ? S.ease(lt / (leg / 2)) : 1 - S.ease((lt - leg / 2) / (leg / 2)); x = x0 + (x1 - 6 - x0) * u; if (sp.slalom) yy += Math.sin(u * Math.PI * 8) * 6; if (sp.style === "hop") st.hop = true; if (sp.style === "bear") st.low = true; }
+          else { x = x0 - qi * 11; st.moving = false; }
+          o.k.set(x, yy, st); if (o.b) { const f = S.foot(o.k); o.b.set(f[0], f[1]); }
+        });
+      });
+    } };
+  };
+
+  /* PŘIHRÁVKY ve dvojicích (nebo trojicích) */
+  T.passing = (S, sp) => {
+    const cm = common(S, sp), pairs = sp.pairs ?? 3, d = sp.dist ?? 60, TT = sp.T || 12, per = sp.every || 1.6;
+    const cx = cm.f.x + cm.f.w / 2;
+    const Pp = Array.from({ length: pairs }, (_, i) => { const y = cm.f.y + cm.f.h * (i + 1) / (pairs + 1); if (sp.gates) S.el("g", {}, S.L.stuff), S.cone(cx, y - 6, "#facc15"), S.cone(cx, y + 6, "#facc15"); return { a: S.kid(col(sp.color || "blue")), b: S.kid(col(sp.color2 || sp.color || "blue"), { hair: "#111" }), ball: S.ball(), y }; });
+    return { T: TT, caption: t => cm.caption(t) || sp.caption || "Přihrávka, zpracování, přihrávka zpět", update(t) {
+      Pp.forEach((p, i) => {
+        const lt = (t + i * .5) % (per * 2), toB = lt < per, u = S.ease(S.ramp(lt % per, .3, 1.1));
+        const ax = cx - d / 2, bx = cx + d / 2;
+        const step = sp.move ? Math.sin(t * .5 + i) * 10 : 0;
+        p.a.set(ax, p.y + step, { moving: sp.move }); p.b.set(bx, p.y - step, { moving: sp.move }); p.a.dir = 1; p.b.dir = -1;
+        const fa = [ax + 6, p.y + step + 11], fb = [bx - 6, p.y - step + 11];
+        const from = toB ? fa : fb, to = toB ? fb : fa;
+        const lift = sp.style === "throw" ? -Math.sin(u * Math.PI) * 14 : 0;
+        p.ball.set(from[0] + (to[0] - from[0]) * u, from[1] + (to[1] - from[1]) * u + lift);
+      });
+    } };
+  };
+
+  /* STŘELBA – zástup, vedení (přes body via), střela do branky, brankář */
+  T.shooting = (S, sp) => {
+    const cm = common(S, sp), q = sp.queue || [60, 140], g = sp.goal || [262, 100, 0], via = sp.via || [[150, 120]], n = sp.shooters ?? 4, cyc = sp.every || 3.2, TT = sp.T || n * cyc;
+    S.goal(g[0], g[1], g[2] || 0, sp.goalW || 30);
+    if (sp.target) S.label(sp.targetLabel || "Cíl", g[0], g[1] - 24);
+    const K = Array.from({ length: n }, (_, i) => ({ k: S.kid(col(sp.color || "blue"), { hair: i % 2 ? "#111" : "#5b3a1e" }), b: S.ball() }));
+    const gk = sp.keeper ? S.kid(col("yellow")) : null;
+    const pts = [q, ...via];
+    return { T: TT, caption: t => cm.caption(t) || sp.caption || "Vedení míče a zakončení na branku", update(t) {
+      const cur = Math.floor(t / cyc) % n, lt = t % cyc;
+      K.forEach((o, i) => {
+        const qi = (i - cur + n) % n; let x, y, bx, by, vis = true, st = {};
+        if (qi === 0) {
+          const run = S.ramp(lt, 0, cyc * .55), segN = pts.length - 1, s = Math.min(segN - 1e-6, run * segN), si = Math.floor(s), u = S.ease(s - si);
+          x = pts[si][0] + (pts[si + 1][0] - pts[si][0]) * u; y = pts[si][1] + (pts[si + 1][1] - pts[si][1]) * u;
+          if (lt > cyc * .55) { const back = S.ramp(lt, cyc * .7, cyc); x = x + (q[0] - 12 * (n - 1) - x) * back; y = y + (q[1] - y) * back; st.alpha = 1 - back * .5; }
+          o.k.set(x, y, { ...st, tag: lt > cyc * .5 && lt < cyc * .75 ? (sp.shotLabel || "Střela!") : null });
+          const f = S.foot(o.k), su = S.ramp(lt, cyc * .55, cyc * .75);
+          const tx = g[0] - (g[2] === 180 ? -3 : 3), ty = g[1] + ((i % 3) - 1) * 8;
+          bx = lt < cyc * .55 ? f[0] : f[0] + (tx - f[0]) * su; by = lt < cyc * .55 ? f[1] : f[1] + (ty - f[1]) * su;
+          if (lt > cyc * .55) { bx = pts[pts.length - 1][0] + 6 + (tx - pts[pts.length - 1][0] - 6) * su; by = pts[pts.length - 1][1] + 11 + (ty - pts[pts.length - 1][1] - 11) * su; }
+          vis = !(lt > cyc * .9);
+        } else { x = q[0] - (qi - 1) * 12 - 12; y = q[1]; o.k.set(x, y, { moving: false }); const f = S.foot(o.k); bx = f[0]; by = f[1]; }
+        o.b.set(bx, by, vis);
+      });
+      if (gk) gk.set(g[0] + (g[2] === 180 ? 10 : -10), g[1] + Math.sin(t * 2) * 8, { tag: "Brankář" });
+    } };
+  };
+
+  /* SOUBOJ 1 NA 1 – útočník proti obránci, cíl = branka/brána/čára */
+  T.duel = (S, sp) => {
+    const cm = common(S, sp), A = sp.attacker || [60, 100], D = sp.defender || [150, 60], goal = sp.target || [255, 100], TT = sp.T || 10;
+    const a = S.kid(col(sp.aColor || "blue")), d = S.kid(col(sp.dColor || "red")), b = sp.ball === false ? null : S.ball();
+    const a2 = sp.pairs === 2 ? S.kid(col(sp.aColor || "blue"), { hair: "#111" }) : null, d2 = sp.pairs === 2 ? S.kid(col(sp.dColor || "red"), { hair: "#111" }) : null, b2 = a2 && sp.ball !== false ? S.ball() : null;
+    const half = TT / 2;
+    function one(t, k1, k2, bb, A, D, goal, flip) {
+      const r = Math.floor(t / half), lt = t - r * half, win = (r + flip) % 2 === 0;
+      const feint = Math.sin(S.ramp(lt, 1.2, 2.4) * Math.PI) * 14;
+      let ap, dp;
+      if (lt < .8) { ap = P(A[0], A[1]); dp = P(D[0], D[1]); }
+      else {
+        const u = S.ease(S.ramp(lt, .8, half - 1));
+        ap = P(A[0] + (goal[0] - A[0]) * u, A[1] + (goal[1] - A[1]) * u + feint);
+        const cu = S.ease(S.ramp(lt, .9, half - 1.4)), meet = P(A[0] + (goal[0] - A[0]) * .55, A[1] + (goal[1] - A[1]) * .55);
+        dp = near(P(D[0], D[1]), win ? P(meet.x, meet.y - 20) : P(ap.x + 6, ap.y - 4), cu);
+        if (!win && lt > half * .65) { ap = P(A[0] + (goal[0] - A[0]) * .6, A[1] + (goal[1] - A[1]) * .6 + feint); }
+      }
+      if (lt > half - .6) { ap = near(ap, P(A[0], A[1]), S.ramp(lt, half - .6, half)); dp = near(dp, P(D[0], D[1]), S.ramp(lt, half - .6, half)); }
+      k1.set(ap.x, ap.y, { tag: lt > half * .6 && lt < half - .6 ? (win ? (sp.winLabel || "Gól!") : (sp.loseLabel || "Chycen!")) : (lt < .8 ? (sp.aLabel || "Útočník") : null) });
+      k2.set(dp.x, dp.y, { tag: lt < .8 ? (sp.dLabel || "Obránce") : null });
+      if (bb) { const f = S.foot(k1); bb.set(f[0], f[1]); }
+    }
+    return { T: TT, caption: t => cm.caption(t) || (t % half < .8 ? "Start na povel" : "Útočník se snaží obejít obránce a dostat se do cíle"), update(t) {
+      one(t, a, d, b, A, D, goal, 0);
+      if (a2) one(t, a2, d2, b2, sp.attacker2 || [240, 100], sp.defender2 || [150, 140], sp.target2 || [45, 100], 1);
+    } };
+  };
+
+  /* MALÁ HRA – n na n, přihrávky a gól (goals: [[x,y,ang,"blue"|"red"],...]) */
+  T.smallgame = (S, sp) => {
+    const cm = common(S, sp), n = sp.n ?? 3, TT = sp.T || 16;
+    const goals = sp.goals || [[cm.f.x + 2, cm.f.y + cm.f.h / 2, 180, "blue"], [cm.f.x + cm.f.w - 2, cm.f.y + cm.f.h / 2, 0, "red"]];
+    goals.forEach(g => S.goal(g[0], g[1], g[2], g[4] || 18));
+    const cx = cm.f.x + cm.f.w / 2, cy = cm.f.y + cm.f.h / 2;
+    const B = Array.from({ length: n }, (_, i) => ({ k: S.kid(col("blue"), { hair: i % 2 ? "#111" : "#5b3a1e" }), side: -1, i }));
+    const Rr = Array.from({ length: n }, (_, i) => ({ k: S.kid(col("red"), { hair: i % 2 ? "#111" : "#c2410c" }), side: 1, i }));
+    const ball = S.ball();
+    const score = S.label("Modří 0 : 0 Červení", cx, 10);
+    // útoky: modří útočí na branky označené "red" (branky soupeře) a naopak
+    const tgtB = goals.filter(g => g[3] === "red"), tgtR = goals.filter(g => g[3] === "blue");
+    const ph = TT / 2;
+    return { T: TT, caption: t => cm.caption(t) || (t % ph < ph * .75 ? (t < ph ? "Modří kombinují a hledají volnou branku" : "Červení útočí, modří brání") : "Gól!"), update(t) {
+      const r = Math.floor(t / ph), lt = t - r * ph, att = r === 0 ? B : Rr, def = r === 0 ? Rr : B, tg = (r === 0 ? tgtB : tgtR)[(Math.floor(t / TT)) % Math.max(1, (r === 0 ? tgtB : tgtR).length)] || goals[r === 0 ? 1 : 0];
+      const dir = Math.sign(tg[0] - cx) || 1;
+      const prog = S.ease(S.ramp(lt, 0, ph * .75));
+      const bx = cx - dir * 40 + (tg[0] - dir * 25 - (cx - dir * 40)) * prog;
+      const by = cy + (tg[1] - cy) * prog + Math.sin(lt * 1.3) * 20;
+      const holder = Math.floor(lt / (ph * .25)) % n;
+      att.forEach((p, i) => { const lane = (i - (n - 1) / 2) * (cm.f.h / (n + .5)); const x = bx + (i === holder ? 0 : -dir * 14 * ((i + 1) % 2)), y = i === holder ? by : cy + lane + Math.sin(t + i) * 6; p.k.set(x, y); });
+      def.forEach((p, i) => { const lane = (i - (n - 1) / 2) * (cm.f.h / (n + .5)); p.k.set(bx + dir * 18 + dir * i * 6, cy + lane * .8 + (by - cy) * .4 + Math.cos(t + i) * 4); });
+      const h = att[holder].k, f = S.foot(h);
+      if (lt < ph * .75) { const pu = (lt % (ph * .25)) / (ph * .25); const prev = att[(holder + n - 1) % n].k; ball.set(pu < .25 && lt > ph * .25 ? prev.x + (f[0] - prev.x) * pu * 4 : f[0], pu < .25 && lt > ph * .25 ? prev.y + 11 + (f[1] - prev.y - 11) * pu * 4 : f[1]); }
+      else { const su = S.ramp(lt, ph * .75, ph * .85); ball.set(f[0] + (tg[0] - dir * 3 - f[0]) * su, f[1] + (tg[1] - f[1]) * su); }
+      const sb = t >= ph * .8 ? 1 : 0, sr = t >= ph * 1.8 ? 1 : 0;
+      score.set(`Modří ${sb} : ${sr} Červení`, cx, 10);
+    } };
+  };
+
+  /* CVIČENÍ NA MÍSTĚ – síla, gymnastika, zpevnění (poses: ["low","down","jump","stand"]) */
+  T.exercise = (S, sp) => {
+    const cm = common(S, sp), n = sp.players ?? 6, poses = sp.poses || ["low", "stand"], per = sp.every || 2.5, TT = sp.T || poses.length * per * 2;
+    const cols = Math.min(n, sp.cols || 3), rows = Math.ceil(n / cols);
+    const K = Array.from({ length: n }, (_, i) => ({ k: S.kid(col(sp.color || "blue"), { hair: i % 2 ? "#111" : "#5b3a1e" }), x: cm.f.x + cm.f.w * ((i % cols) + 1) / (cols + 1), y: cm.f.y + cm.f.h * (Math.floor(i / cols) + 1) / (rows + 1) }));
+    if (sp.mats) K.forEach(o => S.mat(o.x - 14, o.y - 2, 28, 16));
+    const coach = sp.coach === false ? null : S.kid(C.black, { cap: true });
+    const labels = sp.poseLabels || {};
+    return { T: TT, caption: t => { const p = poses[Math.floor(t / per) % poses.length]; return cm.caption(t) || labels[p] || ({ low: "Poloha na čtyřech (medvěd) – zpevnit trup", down: "Leh – zvednout nohy a ruce (banán)", jump: "Výskoky", stand: "Stoj, krátký oddech", push: "Přetlačování ve dvojici" })[p] || p; }, update(t) {
+      const p = poses[Math.floor(t / per) % poses.length];
+      K.forEach((o, i) => {
+        const pair = p === "push" ? (i % 2 ? -1 : 1) : 0;
+        const x = o.x + (pair ? -pair * 6 + Math.sin(t * 4) * 2 * pair : 0) + (sp.move && p === "low" ? Math.sin(t * 1.5) * 10 : 0);
+        o.k.set(x, o.y, { low: p === "low", down: p === "down", jump: p === "jump", moving: (sp.move && p === "low") || p === "jump" });
+        if (pair) o.k.dir = pair;
+      });
+      if (coach) coach.set(cm.f.x + cm.f.w / 2, cm.f.y + cm.f.h + 4, { moving: false, tag: sp.coachTag || "Trenér ukazuje" });
+    } };
+  };
+
+  /* NA ŠREKA / KUBA ŘEKL – hráči postupují k trenérovi, když se nedívá */
+  T.approach = (S, sp) => {
+    const cm = common(S, sp), n = sp.players ?? 6, TT = sp.T || 16, x0 = cm.f.x + 14, x1 = cm.f.x + cm.f.w - 20;
+    const coach = S.kid(col(sp.leaderColor || "#65a30d"), { cap: false });
+    const K = Array.from({ length: n }, (_, i) => ({ k: S.kid(col("blue"), { hair: i % 2 ? "#111" : "#5b3a1e" }), b: sp.ball ? S.ball() : null, y: cm.f.y + 14 + i * (cm.f.h - 28) / Math.max(1, n - 1), sp: .75 + hash(i) * .5 }));
+    return { T: TT, caption: t => cm.caption(t) || ((t % 4) < 2.5 ? (sp.goCaption || "Šrek je otočený a říká říkanku – hráči se plíží vpřed") : (sp.stopCaption || "Šrek se otočí – kdo se hýbe, jde o 3 kroky zpět")), update(t) {
+      const turned = (t % 4) < 2.5;
+      coach.set(x1 + 12, cm.f.y + cm.f.h / 2, { moving: false, tag: sp.leaderLabel || "Šrek" }); coach.dir = turned ? 1 : -1; coach.set(x1 + 12, cm.f.y + cm.f.h / 2, { moving: false, tag: sp.leaderLabel || "Šrek" });
+      K.forEach((o, i) => {
+        let prog = 0; for (let k = 0; k * 4 < t; k++) { const dur = Math.min(2.5, t - k * 4); prog += Math.max(0, dur) * o.sp; if (i === (k * 2) % n && t > k * 4 + 2.7) prog -= 1.6; }
+        const x = Math.min(x1 - 8, x0 + prog * 10); const moving = turned && x < x1 - 8;
+        const caught = !turned && i === (Math.floor(t / 4) * 2) % n && (t % 4) < 3.3;
+        o.k.set(x, o.y, { moving, tag: caught ? "Zpět 3 kroky" : (x >= x1 - 8 ? "V cíli!" : null) });
+        if (o.b) { const f = S.foot(o.k); o.b.set(f[0], f[1]); }
+      });
+    } };
+  };
+
+  // registrace specifikací
+  (window.ANIM_SPECS || []).forEach(sp => {
+    if (!T[sp.template] || Anim.has(sp.drill)) return;
+    Anim.register(sp.drill, S => T[sp.template](S, sp), sp.vb);
+  });
+  Anim.templates = T;
 })();
 
 /*/ANIM*/</script>
@@ -502,6 +1328,16 @@ const myAges = () => { const p = state.profile; return p?.age_groups?.length ? a
 const ageOk = d => { const m = myAges(); return state.showAllAges || !m.length || !(d.age_groups||[]).length || d.age_groups.some(a => m.includes(a)); };
 const toggleSet = (set, k) => { if(k==="all") set.clear(); else set.has(k) ? set.delete(k) : set.add(k); };
 const catLabel = set => set.size ? [...set].map(k=>CATS[k]).join(", ") : "všechny typy";
+function fmtText(v){
+  const out = []; let ul = [];
+  const flush = () => { if(ul.length){ out.push(`<ul>${ul.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`); ul = []; } };
+  String(v).split(/\n/).forEach(line => {
+    const l = line.trim(); if(!l){ flush(); return; }
+    const m = l.match(/^(?:[-•*–]\s+|\d+[.)]\s+)(.*)$/);
+    if(m) ul.push(m[1]); else { flush(); out.push(`<p${/^Cíl\s*:/.test(l)?' class="goal"':""}>${esc(l)}</p>`); }
+  });
+  flush(); return out.join("");
+}
 const vpaths = d => (d.video_path||"").split("|").filter(Boolean);
 const ageSort = arr => [...(arr||[])].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
 const ageRange = arr => { const a = ageSort(arr); return a.length ? (a.length>1 ? a[0]+"–"+a[a.length-1] : a[0]) : ""; };
@@ -621,7 +1457,7 @@ function showDrill(id){
   const d = state.drills.find(x=>x.id===id); if(!d) return;
   state.view = { type:"drill", id };
   fab.hidden = true;
-  const sec = (t,v) => v ? `<div class="section"><h3>${t}</h3><p>${esc(v)}</p></div>` : "";
+  const sec = (t,v) => v ? `<div class="section"><h3>${t}</h3>${fmtText(v)}</div>` : "";
   const mine = isMine(d);
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
    <div class="card">
