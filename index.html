@@ -187,6 +187,7 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 <nav class="tabs" id="tabs" hidden>
   <button data-tab="drills" class="on">Cvičení</button>
   <button data-tab="sessions">Tréninky</button>
+  <button data-tab="add">＋ Přidat</button>
   <button data-tab="settings" style="flex:0 0 auto;padding:12px 16px" aria-label="Nastavení">⚙</button>
 </nav>
 <main id="app"><p class="muted">Načítám…</p></main>
@@ -1506,6 +1507,53 @@ function renderAuth(mode="login"){
 async function loadDrills(){
   const { data, error } = await sb.from("drills").select("*").order("category").order("name");
   if(error) throw error; state.drills = data;
+  registerDbAnims();
+}
+function registerDbAnims(){
+  state.drills.forEach(d => { const sp = d.anim_spec;
+    if(sp && sp.template && !Anim.has(d.name) && Anim.templates && Anim.templates[sp.template]) Anim.register(d.name, S => Anim.templates[sp.template](S, { ...sp, drill:d.name }), sp.vb); });
+}
+async function loadSubmissions(){
+  const { data, error } = await sb.from("drill_submissions").select("*").order("created_at", { ascending:false }).limit(50);
+  if(error) throw error; state.subs = data || [];
+}
+function renderAdd(){
+  fab.hidden = true;
+  const st = { pending:["⏳ Čeká na zpracování","draft"], processing:["⚙ Zpracovává se","draft"], done:["✓ Přidáno","ready"], failed:["✕ Nepodařilo se","over"] };
+  const subs = state.subs || [];
+  app.innerHTML = `<div class="card">
+    <h2 style="margin-top:0">Přidat cvičení z webu</h2>
+    <p class="muted" style="margin-top:0">Vlož odkaz na stránku nebo video se cvičením. Odkaz se uloží a automatická úloha ho do hodiny zpracuje stejně jako ostatní cvičení: popis v odrážkách, typ, kategorie, délka a animace.</p>
+    <form id="addf" autocomplete="off">
+      <label>Odkaz na cvičení *</label>
+      <input type="url" name="url" required placeholder="https://…" inputmode="url">
+      <label>Poznámka (nepovinné)</label>
+      <textarea name="note" placeholder="např. vhodné pro U7, jen druhá část videa…" style="min-height:70px"></textarea>
+      <p class="muted">Přidal: <b>${esc(state.user.email)}</b></p>
+      <button class="btn primary bigadd" type="submit">Uložit odkaz</button>
+    </form>
+    <button class="btn" id="manual" style="width:100%;margin-top:4px">Nebo zadat cvičení ručně</button>
+  </div>
+  <h3 class="muted" style="margin:18px 0 8px">Moje odeslané odkazy</h3>
+  ${subs.length ? subs.map(x => { const [lbl, cls] = st[x.status] || [x.status,"draft"]; const d = x.result_drill_id && state.drills.find(y=>y.id===x.result_drill_id);
+    return `<div class="card"><div style="word-break:break-all;font-weight:600">${esc(x.url)}</div>
+      <div class="muted" style="margin-top:4px"><span class="tplv ${cls==="over"?"over":cls==="ready"?"ok":"under"}">${lbl}</span> · ${new Date(x.created_at).toLocaleString("cs-CZ",{day:"numeric",month:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+      ${x.note?`<div class="muted" style="margin-top:4px">📝 ${esc(x.note)}</div>`:""}
+      ${x.error?`<div class="pw" style="margin-top:4px">${esc(x.error)}</div>`:""}
+      <div class="row" style="margin-top:8px">${d?`<button class="btn primary small" data-sd="${d.id}">Otevřít: ${esc(d.name)}</button>`:""}<span class="grow"></span>${["pending","failed"].includes(x.status)?`<button class="btn small danger" data-sdel="${x.id}">Smazat</button>`:""}</div></div>`; }).join("")
+    : `<div class="empty">Zatím jsi nepřidal žádný odkaz.</div>`}`;
+  document.getElementById("manual").onclick = () => editDrill();
+  document.getElementById("addf").onsubmit = async e => {
+    e.preventDefault(); const f = new FormData(e.target), url = String(f.get("url")||"").trim();
+    if(!/^https?:\/\//i.test(url)) return toast("Odkaz musí začínat http:// nebo https://");
+    if((state.subs||[]).some(x=>x.url===url && x.status!=="failed")) return toast("Tento odkaz už je uložený");
+    const btn = e.submitter; btn.disabled = true;
+    const { error } = await sb.from("drill_submissions").insert({ url, note: String(f.get("note")||"").trim() || null });
+    if(error){ btn.disabled = false; return fail(error); }
+    toast("Odkaz uložen – cvičení se brzy objeví v seznamu"); await loadSubmissions(); renderAdd();
+  };
+  app.querySelectorAll("[data-sd]").forEach(b => b.onclick = () => showDrill(b.dataset.sd));
+  app.querySelectorAll("[data-sdel]").forEach(b => b.onclick = async () => { if(!confirm("Smazat tento odkaz?")) return; const { error } = await sb.from("drill_submissions").delete().eq("id", b.dataset.sdel); if(error) return fail(error); await loadSubmissions(); renderAdd(); });
 }
 async function loadSessions(){
   const { data, error } = await sb.from("sessions").select("*, session_drills(id, drill_id, position, duration_min, note)").order("date",{ascending:false});
@@ -1591,7 +1639,8 @@ function showDrill(id){
       : d.xps_video && !d.video_url ? `<div class="section"><h3>Video</h3><p>▶ Video je v aplikaci XPS: <b>Sbírky → Příručka FAČR → ${esc(d.name)}</b></p></div>` : ""}
     ${sec("Průběh",d.description)}${sec("Příprava",d.setup)}${sec("Pomůcky",d.equipment)}
     ${sec("Na co dbát",d.coaching_points)}${sec("Varianty",d.variations)}
-    ${d.source?`<p class="muted" style="margin-top:14px">Zdroj: ${esc(d.source)}</p>`:""}
+    ${d.source?`<p class="muted" style="margin-top:14px">Zdroj: ${/^https?:/.test(d.source)?`<a href="${esc(safeUrl(d.source)||"#")}" target="_blank" rel="noopener">${esc(d.source)}</a>`:esc(d.source)}</p>`:""}
+    ${d.added_by?`<p class="muted" style="margin-top:4px">Přidal: ${esc(d.added_by)}</p>`:""}
     ${mine && d.video_url?`<label class="noprint" style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:16px"><input type="checkbox" id="chk" ${d.checked?"checked":""}> Video jsem zkontroloval, popis sedí</label>`:""}
     <div class="row noprint" style="margin-top:14px"><button class="btn primary" id="edit">${mine?"Upravit":"Upravit jako vlastní kopii"}</button><span class="grow"></span>${mine?`<button class="btn danger" id="del">Smazat</button>`:""}</div>
    </div>`;
@@ -2015,6 +2064,7 @@ function render(){
   if(state.view?.type==="drill") return showDrill(state.view.id);
   if(state.view?.type==="session") return showSession(state.view.id);
   if(state.tab==="settings") return renderSettings();
+  if(state.tab==="add"){ renderAdd(); Promise.all([loadSubmissions(), loadDrills()]).then(()=>{ if(state.tab==="add" && !state.view) renderAdd(); }).catch(fail); return; }
   fab.hidden = false;
   state.tab==="drills" ? renderDrills() : renderSessions();
 }
