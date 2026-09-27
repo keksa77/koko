@@ -10,11 +10,11 @@
 :root{
   --bg:#f4f6f3; --card:#ffffff; --ink:#1b2420; --muted:#5f6b65; --line:#dfe5e1;
   --brand:#1f7a3f; --brand-ink:#ffffff; --accent:#f2b705; --danger:#c0392b; --chip:#e8efe9;
-  --shadow:0 1px 3px rgba(0,0,0,.08);
+  --shadow:0 1px 3px rgba(0,0,0,.08); --sel:#e3f2e7;
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#111614; --card:#1a211e; --ink:#e7ece9; --muted:#9aa8a1; --line:#2b3531;
-    --brand:#35a862; --brand-ink:#08130c; --chip:#243029; --shadow:none; }
+    --brand:#35a862; --brand-ink:#08130c; --chip:#243029; --shadow:none; --sel:#1d3526; }
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -96,6 +96,24 @@ dialog .dbody{padding:8px 16px 16px;overflow:auto}
 .vid{flex:none;background:#c4302b;color:#fff;text-decoration:none;font-size:13px;font-weight:700;border-radius:8px;padding:5px 9px;white-space:nowrap}
 .print-only{display:none}
 @media print{.print-only{display:block;font-size:11px;color:#555;word-break:break-all} .tl-desc{display:block;-webkit-line-clamp:unset} .tl-more summary{display:none}}
+.ddrow{display:flex;gap:8px;margin:10px 0 8px}
+.dd{position:relative;flex:1;min-width:0}
+.ddbtn{width:100%;display:flex;align-items:center;gap:4px;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 10px;font-size:14px;white-space:nowrap;cursor:pointer}
+.ddbtn .ddl{color:var(--muted)}
+.ddbtn b{overflow:hidden;text-overflow:ellipsis}
+.ddbtn .caret{margin-left:auto;padding-left:4px;color:var(--muted)}
+.ddbtn.on{border:2px solid var(--brand);background:var(--sel);padding:8px 9px}
+.ddbtn.on b{color:var(--brand)}
+.ddmenu{display:none;position:absolute;z-index:40;top:calc(100% + 4px);left:0;min-width:100%;width:max-content;max-width:min(320px,90vw);max-height:62vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.18);padding:6px}
+.dd:last-child .ddmenu{left:auto;right:0}
+.dd.open .ddmenu{display:block}
+.dd.open .ddbtn .caret{transform:rotate(180deg)}
+.ddopt{display:flex;gap:10px;align-items:center;font-weight:400;margin:0;padding:9px 8px;border-radius:8px;font-size:15px;cursor:pointer}
+.ddopt.on{background:var(--sel);font-weight:700;color:var(--brand)}
+.ddopt input{width:18px;height:18px;accent-color:var(--brand);margin:0;flex:none}
+.ddopt .n{margin-left:auto;color:var(--muted);font-weight:400;font-size:13px}
+.ddok{width:100%;margin-top:6px}
+.thumb{flex:none;width:112px;border-radius:8px;overflow:hidden;align-self:flex-start;background:#3a9a52;aspect-ratio:3/2}
 .agebar{font-size:14px;margin:-4px 0 10px;color:var(--muted)}
 .agebar b{color:var(--brand)}
 .linkbtn{border:0;background:none;color:var(--brand);text-decoration:underline;padding:0 4px;font-size:14px}
@@ -467,27 +485,38 @@ const Anim = (() => {
 
   const VB = { "Krádež pokladu": [240, 240] };
 
-  function mount(box, name) {
+  function mount(box, name, opt = {}) {
     const make = SCENES[name]; if (!make) return null;
-    box.innerHTML = `<svg style="width:100%;height:auto;display:block;border-radius:12px;background:#3a9a52"></svg>
+    const mini = !!opt.mini;
+    box.innerHTML = mini ? `<svg style="width:100%;height:auto;display:block;border-radius:8px;background:#3a9a52"></svg>` : `<svg style="width:100%;height:auto;display:block;border-radius:12px;background:#3a9a52"></svg>
       <div class="animcap"></div>
       <div class="animbar"><button type="button" class="btn sm" data-a="play">⏸ Pauza</button><button type="button" class="btn sm" data-a="speed">Rychlost 1×</button><button type="button" class="btn sm" data-a="restart">⟲ Od začátku</button></div>`;
     const svg = box.querySelector("svg"), cap = box.querySelector(".animcap");
     const S = stage(svg, VB[name] || [300, 200]);
+    if (mini) S.L.labels.setAttribute("display", "none");
     const sc = make(S);
-    let t = 0, last = performance.now(), run = true, speed = 1, raf, dead = false;
+    let t = mini ? (name.length * 1.37) % sc.T : 0, last = performance.now(), run = true, speed = 1, raf = 0, dead = false, visible = !mini;
     function frame(now) {
-      if (dead || !svg.isConnected) return;
+      raf = 0;
+      if (dead || !svg.isConnected) { dead = true; io && io.disconnect(); return; }
       const dt = Math.min(.05, (now - last) / 1000); last = now;
       if (run) t = (t + dt * speed) % sc.T;
-      S.time = t; sc.update(t); const c = sc.caption?.(t) || ""; if (cap.textContent !== c) cap.textContent = c;
-      raf = requestAnimationFrame(frame);
+      S.time = t; sc.update(t);
+      if (cap) { const c = sc.caption?.(t) || ""; if (cap.textContent !== c) cap.textContent = c; }
+      if (visible) raf = requestAnimationFrame(frame);
     }
-    raf = requestAnimationFrame(frame);
-    box.querySelector('[data-a="play"]').onclick = e => { run = !run; e.target.textContent = run ? "⏸ Pauza" : "▶ Přehrát"; };
-    box.querySelector('[data-a="speed"]').onclick = e => { speed = speed === 1 ? .5 : speed === .5 ? 2 : 1; e.target.textContent = `Rychlost ${speed}×`; };
-    box.querySelector('[data-a="restart"]').onclick = () => { t = 0; };
-    return { stop() { dead = true; cancelAnimationFrame(raf); }, seek(x) { t = x; S.time = x; sc.update(x); cap.textContent = sc.caption?.(x) || ""; }, T: sc.T };
+    let io = null;
+    if (mini && "IntersectionObserver" in window) {
+      S.time = t; sc.update(t);
+      io = new IntersectionObserver(es => { visible = es.some(e => e.isIntersecting); if (visible && !raf && !dead) { last = performance.now(); raf = requestAnimationFrame(frame); } }, { rootMargin: "80px" });
+      io.observe(box);
+    } else { visible = true; raf = requestAnimationFrame(frame); }
+    if (!mini) {
+      box.querySelector('[data-a="play"]').onclick = e => { run = !run; e.target.textContent = run ? "⏸ Pauza" : "▶ Přehrát"; };
+      box.querySelector('[data-a="speed"]').onclick = e => { speed = speed === 1 ? .5 : speed === .5 ? 2 : 1; e.target.textContent = `Rychlost ${speed}×`; };
+      box.querySelector('[data-a="restart"]').onclick = () => { t = 0; };
+    }
+    return { stop() { dead = true; if (raf) cancelAnimationFrame(raf); io && io.disconnect(); }, seek(x) { t = x; S.time = x; sc.update(x); if (cap) cap.textContent = sc.caption?.(x) || ""; }, T: sc.T };
   }
   return { mount, has: n => !!SCENES[n], names: () => Object.keys(SCENES), register: (n, f, vb) => { SCENES[n] = f; if (vb) VB[n] = vb; }, stage };
 })();
@@ -1325,7 +1354,32 @@ const CATS = {
 const AGES = ["U5","U6","U7","U8","U9","U10","U11"];
 const AGE_INFO = { U5:"Předpřípravka (4–5 let)", U6:"Předpřípravka / minipřípravka (5–6 let)", U7:"Minipřípravka (6–7 let)", U8:"Mladší přípravka (7–8 let)", U9:"Mladší přípravka (8–9 let)", U10:"Starší přípravka (9–10 let)", U11:"Starší přípravka (10–11 let)" };
 const myAges = () => { const p = state.profile; return p?.age_groups?.length ? ageSort(p.age_groups) : (p?.age_group ? [p.age_group] : []); };
-const ageOk = d => { const m = myAges(); return state.showAllAges || !m.length || !(d.age_groups||[]).length || d.age_groups.some(a => m.includes(a)); };
+const agesMatch = (d, set) => !set || !set.size || !(d.age_groups||[]).length || d.age_groups.some(a => set.has(a));
+const ageOk = d => agesMatch(d, state.ages);
+function ddHtml(id, label, opts, set){
+  const name = k => (opts.find(o=>o[0]===k)||[k,k])[1];
+  const sum = !set.size ? "vše" : set.size <= 2 ? [...set].map(name).join(", ") : `${set.size} vybrané`;
+  return `<div class="dd ${state.openDD===id?"open":""}" data-dd="${id}"><button type="button" class="ddbtn ${set.size?"on":""}" aria-expanded="${state.openDD===id}"><span class="ddl">${label}:</span> <b>${esc(sum)}</b><span class="caret">▾</span></button>
+    <div class="ddmenu"><label class="ddopt ${!set.size?"on":""}"><input type="checkbox" data-ddk="" ${!set.size?"checked":""}> Vše</label>
+    ${opts.map(([k,t,n])=>`<label class="ddopt ${set.has(k)?"on":""}"><input type="checkbox" data-ddk="${k}" ${set.has(k)?"checked":""}> ${esc(t)}${n!=null?`<span class="n">${n}</span>`:""}</label>`).join("")}
+    <button type="button" class="btn small primary ddok">Hotovo</button></div></div>`;
+}
+function ddBind(root, id, set, rerender){
+  const el = root.querySelector(`[data-dd="${id}"]`); if(!el) return;
+  state.ddRerender = rerender;
+  el.querySelector(".ddbtn").onclick = () => { state.openDD = state.openDD===id ? null : id; rerender(); };
+  el.querySelectorAll("[data-ddk]").forEach(cb => cb.onchange = () => { const k = cb.dataset.ddk; if(!k) set.clear(); else if(cb.checked) set.add(k); else set.delete(k); state.openDD = id; const sc = el.querySelector(".ddmenu").scrollTop; rerender(); const m = document.querySelector(`[data-dd="${id}"] .ddmenu`); if(m) m.scrollTop = sc; });
+  el.querySelector(".ddok").onclick = () => { state.openDD = null; rerender(); };
+}
+document.addEventListener("click", e => { if(state.openDD && !e.target.closest(".dd")){ state.openDD = null; state.ddRerender && state.ddRerender(); } });
+let thumbIO = null;
+function mountThumbs(root){
+  thumbIO && thumbIO.disconnect();
+  const els = root.querySelectorAll("[data-thumb]");
+  if(!("IntersectionObserver" in window)){ els.forEach(el => Anim.mount(el, el.dataset.thumb, { mini:true })); return; }
+  thumbIO = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting && !e.target.dataset.m){ e.target.dataset.m = 1; Anim.mount(e.target, e.target.dataset.thumb, { mini:true }); } }), { rootMargin:"200px" });
+  els.forEach(el => thumbIO.observe(el));
+}
 const toggleSet = (set, k) => { if(k==="all") set.clear(); else set.has(k) ? set.delete(k) : set.add(k); };
 const catLabel = set => set.size ? [...set].map(k=>CATS[k]).join(", ") : "všechny typy";
 function fmtText(v){
@@ -1344,7 +1398,7 @@ const ageRange = arr => { const a = ageSort(arr); return a.length ? (a.length>1 
 
 
 
-const state = { user:null, profile:null, showAllAges:false, tab:"drills", drills:[], sessions:[], cats:new Set(), q:"", onlyFav:false, onlyCz:false, view:null };
+const state = { user:null, profile:null, showAllAges:false, ages:null, openDD:null, ddRerender:null, tab:"drills", drills:[], sessions:[], cats:new Set(), q:"", onlyFav:false, onlyCz:false, view:null };
 const app = document.getElementById("app");
 const fab = document.getElementById("fab");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1406,7 +1460,7 @@ const toMin = t => { if(!t) return null; const [h,m] = t.split(":").map(Number);
 
 function drillCard(d){
   return `<div class="card" data-open="${d.id}" style="cursor:pointer">
-    <div class="row"><div class="grow"><p class="drill-title">${esc(d.name)}</p>
+    <div class="row" style="align-items:flex-start">${Anim.has(d.name)?`<div class="thumb" data-thumb="${esc(d.name)}"></div>`:""}<div class="grow"><p class="drill-title">${esc(d.name)}</p>
       <div class="muted">${[d.duration_min?d.duration_min+" min":"", players(d), d.coaches_needed?`${d.coaches_needed} trenér${d.coaches_needed>1?"i":""}`:""].filter(Boolean).map(esc).join(" · ")}</div></div>
       ${isMine(d)?`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}" aria-label="Oblíbené">${d.favorite?"★":"☆"}</button>`:""}</div>
     <div style="margin-top:6px"><span class="tag">${CATS[d.category]||d.category}</span>${d.age_groups?.length?`<span class="tag">${ageRange(d.age_groups)}</span>`:""}${d.video_url?`<span class="tag">▶ ${LANG[d.video_lang]||"video"}</span>`:""}${Anim.has(d.name)?`<span class="tag">🎬 animace</span>`:""}${vpaths(d).length?`<span class="tag">▶ video FAČR</span>`:d.xps_video&&!d.video_url?`<span class="tag">▶ video v XPS</span>`:""}${d.source?.startsWith("FAČR")?`<span class="tag">FAČR</span>`:""}${d.checked?`<span class="tag">✓ ověřeno</span>`:""}</div></div>`;
@@ -1414,28 +1468,27 @@ function drillCard(d){
 function renderDrills(){
   const q = state.q.toLowerCase();
   const base = state.drills.filter(ageOk);
+  const byType = state.drills.filter(d => !state.cats.size || state.cats.has(d.category));
   const list = base.filter(d =>
     (!state.cats.size || state.cats.has(d.category)) && (!state.onlyFav || d.favorite) &&
     (!state.onlyCz || d.video_lang==="cs" || d.video_lang==="sk") &&
     (!q || [d.name,d.description,d.equipment,d.coaching_points,d.video_title].join(" ").toLowerCase().includes(q)));
   app.innerHTML = `
-    <div class="agebar">Kategorie <b>${esc(myAges().join(", "))}</b>${state.showAllAges?" + ostatní":""} <button class="linkbtn" id="toSettings">změnit</button></div>
     <input type="search" id="q" placeholder="Hledat cvičení, pomůcky…" value="${esc(state.q)}">
-    <div class="chips" style="margin-top:10px">
-      <button class="chip all ${!state.cats.size?"on":""}" data-cat="all">Všechny typy (${base.length})</button>
-      ${Object.entries(CATS).filter(([k])=>base.some(d=>d.category===k)).map(([k,v])=>`<button class="chip ${state.cats.has(k)?"on":""}" aria-pressed="${state.cats.has(k)}" data-cat="${k}">${v} (${base.filter(d=>d.category===k).length})</button>`).join("")}
+    <div class="ddrow">
+      ${ddHtml("age", "Kat.", AGES.map(a=>[a, a, byType.filter(d=>(d.age_groups||[]).includes(a)).length]), state.ages)}
+      ${ddHtml("cat", "Typ", Object.entries(CATS).filter(([k])=>state.drills.some(d=>d.category===k)).map(([k,v])=>[k, v, base.filter(d=>d.category===k).length]), state.cats)}
     </div>
-    ${state.cats.size?`<div class="selinfo">Vybráno: ${esc(catLabel(state.cats))} · <button class="linkbtn" data-cat="all">zrušit</button></div>`:""}
     <div class="chips" style="padding-top:0">
       <button class="chip ${state.onlyFav?"on":""}" data-favf="1">★ Oblíbené</button>
       <button class="chip ${state.onlyCz?"on":""}" data-cz="1">🇨🇿🇸🇰 Video česky/slovensky</button>
     </div>
     <p class="muted" style="margin:0 0 8px">${list.length} cvičení</p>
     <div id="list">${list.map(drillCard).join("") || `<div class="empty">${state.drills.length ? "Nic neodpovídá filtru." : "Zatím tu nejsou žádná cvičení. Přidej vlastní tlačítkem +."}</div>`}</div>`;
-  document.getElementById("toSettings").onclick = () => { state.tab="settings"; render(); };
+  ddBind(app, "age", state.ages, renderDrills); ddBind(app, "cat", state.cats, renderDrills);
+  mountThumbs(app);
   const qi = document.getElementById("q");
   qi.oninput = () => { state.q = qi.value; const pos = qi.selectionStart; renderDrills(); const n=document.getElementById("q"); n.focus(); n.setSelectionRange(pos,pos); };
-  app.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { toggleSet(state.cats, b.dataset.cat); renderDrills(); });
   app.querySelector("[data-favf]").onclick = () => { state.onlyFav = !state.onlyFav; renderDrills(); };
   app.querySelector("[data-cz]").onclick = () => { state.onlyCz = !state.onlyCz; renderDrills(); };
   app.querySelectorAll("[data-open]").forEach(c => c.onclick = e => { if(e.target.closest("[data-fav]")) return; showDrill(c.dataset.open); });
@@ -1627,7 +1680,7 @@ function editSession(s={}){
   state.view = { type:"editSession" }; fab.hidden = true;
   const items = [...(s.session_drills||[])].sort((a,b)=>a.position-b.position).map(x=>({ drill_id:x.drill_id, duration_min:x.duration_min||10, note:x.note||"" }));
   const today = new Date().toISOString().slice(0,10);
-  const pickCats = new Set(state.cats); let pickQ = "";
+  const pickCats = new Set(state.cats), pickAges = new Set(state.ages); let pickQ = "";
   app.innerHTML = `<button class="back" id="back">‹ Zpět</button>
   <form id="sf" autocomplete="off">
     <div class="card">
@@ -1647,9 +1700,9 @@ function editSession(s={}){
       <div id="plan" class="plan"></div>
     </div>
     <div class="card">
-      <div class="row"><strong class="grow">Zásobník cvičení</strong><span class="muted">${myAges().length && !state.showAllAges ? "kategorie "+esc(myAges().join(", ")) : "všechny kategorie"}</span></div>
+      <div class="row"><strong class="grow">Zásobník cvičení</strong></div>
       <input type="search" id="pq" placeholder="Hledat cvičení…" style="margin-top:8px">
-      <div class="chips" id="pchips" style="margin-top:8px"></div>
+      <div class="ddrow" id="pchips"></div>
       <div id="pool"></div>
     </div>
     <div class="savebar"><span id="tot2" class="grow"></span><button class="btn primary" type="submit">Uložit trénink</button></div>
@@ -1697,14 +1750,14 @@ function editSession(s={}){
   }
   function poolList(){
     const q = pickQ.toLowerCase();
-    return state.drills.filter(d => ageOk(d) && (!pickCats.size||pickCats.has(d.category)) && (!q || d.name.toLowerCase().includes(q)));
+    return state.drills.filter(d => agesMatch(d, pickAges) && (!pickCats.size||pickCats.has(d.category)) && (!q || d.name.toLowerCase().includes(q)));
   }
   function drawPool(){
-    const base = state.drills.filter(ageOk);
-    const cats = Object.keys(CATS).filter(k => base.some(d=>d.category===k));
-    document.getElementById("pchips").innerHTML = `<button type="button" class="chip all ${!pickCats.size?"on":""}" data-pc="all">Všechny typy</button>` +
-      cats.map(k=>`<button type="button" class="chip ${pickCats.has(k)?"on":""}" aria-pressed="${pickCats.has(k)}" data-pc="${k}">${CATS[k]} (${base.filter(d=>d.category===k).length})</button>`).join("");
-    document.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => { toggleSet(pickCats, b.dataset.pc); drawPool(); });
+    const base = state.drills.filter(d => agesMatch(d, pickAges)), byType = state.drills.filter(d => !pickCats.size || pickCats.has(d.category));
+    const pc = document.getElementById("pchips");
+    pc.innerHTML = ddHtml("page", "Kat.", AGES.map(a=>[a, a, byType.filter(d=>(d.age_groups||[]).includes(a)).length]), pickAges) +
+      ddHtml("pcat", "Typ", Object.entries(CATS).filter(([k])=>state.drills.some(d=>d.category===k)).map(([k,v])=>[k, v, base.filter(d=>d.category===k).length]), pickCats);
+    ddBind(pc, "page", pickAges, drawPool); ddBind(pc, "pcat", pickCats, drawPool);
     const used = new Set(items.map(x=>x.drill_id));
     const list = poolList();
     pool.innerHTML = list.map(d=>`<div class="po" data-id="${d.id}">
@@ -1799,7 +1852,7 @@ function renderSettings(first=false){
     <div class="selinfo" style="margin-top:8px">${cur.size ? "Vybráno: " + ageSort([...cur]).join(", ") : '<span class="muted">Zatím nic nevybráno.</span>'}</div>
     <div class="muted">${ageSort([...cur]).map(a=>`${a} – ${AGE_INFO[a]}`).join("<br>")}</div>
     ${first?`<button class="btn primary" id="goOn" style="margin-top:14px;width:100%" ${cur.size?"":"disabled"}>Pokračovat</button>`:""}
-    <label style="display:flex;gap:8px;align-items:center;font-weight:400;margin-top:14px"><input type="checkbox" id="allAges" ${state.showAllAges?"checked":""}> Zobrazovat i cvičení pro jiné kategorie</label>
+    <p class="muted" style="margin-top:12px">V seznamu cvičení i v zásobníku to lze kdykoli dočasně změnit rozbalovacím filtrem „Kategorie“.</p>
     ${first?"":`<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:12px" class="muted">Přihlášen: ${esc(state.user.email)}</div>`}
   </div>`;
   app.querySelectorAll("[data-age]").forEach(b => b.onclick = async () => {
@@ -1808,10 +1861,11 @@ function renderSettings(first=false){
     const { error } = await sb.from("profiles").upsert({ user_id: state.user.id, age_groups, age_group: age_groups[0] || null, updated_at: new Date().toISOString() });
     if(error) return fail(error);
     state.profile = { ...(state.profile||{}), age_groups, age_group: age_groups[0] || null };
+    state.ages = new Set(age_groups);
     setTitle(); renderSettings(first);
   });
   const go = document.getElementById("goOn"); if(go) go.onclick = () => { state.tab = "drills"; render(); };
-  document.getElementById("allAges").onchange = e => { state.showAllAges = e.target.checked; try{ localStorage.setItem("allAges", e.target.checked?"1":""); }catch(_){} };
+
 }
 function setTitle(){ const m = myAges(); document.getElementById("title").textContent = "⚽ Trenér" + (m.length ? " " + (m.length>2 ? ageRange(m) : m.join("+")) : ""); }
 
@@ -1820,6 +1874,7 @@ function render(){
   if(!state.user) return renderAuth();
   document.getElementById("tabs").hidden = false; document.getElementById("logoutBtn").hidden = false;
   setTitle();
+  if(state.profile && !state.ages) state.ages = new Set(myAges());
   if(!myAges().length){ document.getElementById("tabs").hidden = true; return renderSettings(true); }
   document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab===state.tab));
   if(state.view?.type==="drill") return showDrill(state.view.id);
@@ -1831,13 +1886,13 @@ function render(){
 document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => { state.tab = b.dataset.tab; state.view = null; render(); });
 fab.onclick = () => state.tab==="drills" ? editDrill() : editSession();
 document.getElementById("logoutBtn").onclick = () => sb.auth.signOut();
-try{ state.showAllAges = !!localStorage.getItem("allAges"); }catch(_){}
+
 
 let loadedFor = null;
 sb.auth.onAuthStateChange((_ev, session) => {
   const u = session?.user || null;
   state.user = u;
-  if(!u){ loadedFor = null; state.drills=[]; state.sessions=[]; state.profile=null; state.view=null; return render(); }
+  if(!u){ loadedFor = null; state.drills=[]; state.sessions=[]; state.profile=null; state.ages=null; state.view=null; return render(); }
   if(loadedFor === u.id) return;
   loadedFor = u.id;
   setTimeout(async () => {
