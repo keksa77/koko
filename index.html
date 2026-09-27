@@ -8,21 +8,21 @@
 <title>Trenér U7</title>
 <style>
 :root{
-  --bg:#f4f6f3; --card:#ffffff; --ink:#1b2420; --muted:#5f6b65; --line:#dfe5e1;
+  --bg:#f4f6f3; --card:#ffffff; --ink:#1b2420; --muted:#48534d; --line:#dfe5e1;
   --brand:#1f7a3f; --brand-ink:#ffffff; --accent:#f2b705; --danger:#c0392b; --chip:#e8efe9;
   --shadow:0 1px 3px rgba(0,0,0,.08); --sel:#e3f2e7;
 }
 @media (prefers-color-scheme: dark){
-  :root{ --bg:#111614; --card:#1a211e; --ink:#e7ece9; --muted:#9aa8a1; --line:#2b3531;
+  :root{ --bg:#111614; --card:#1a211e; --ink:#e7ece9; --muted:#b3c0b9; --line:#2b3531;
     --brand:#35a862; --brand-ink:#08130c; --chip:#243029; --shadow:none; --sel:#1d3526; }
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 button,input,select,textarea{font:inherit;color:inherit}
 header{position:sticky;top:0;z-index:5;background:var(--brand);color:var(--brand-ink);padding:12px 16px calc(10px);display:flex;align-items:center;gap:10px}
-header h1{font-size:18px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-header button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:4px 10px;font-size:14px}
+header h1{font-size:20px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:4px 10px;font-size:16px}
 nav.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:50px;z-index:4}
 nav.tabs button{flex:1;border:0;background:none;padding:12px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent}
 nav.tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
@@ -30,44 +30,44 @@ main{max-width:760px;margin:0 auto;padding:16px 16px 96px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow);margin-bottom:10px}
 .row{display:flex;gap:8px;align-items:center}
 .grow{flex:1;min-width:0}
-.muted{color:var(--muted);font-size:14px}
+.muted{color:var(--muted);font-size:16px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
-.chip{flex:none;border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:5px 12px;font-size:14px;white-space:nowrap}
+.chip{flex:none;border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:5px 12px;font-size:16px;white-space:nowrap}
 .chip.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:700;box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--brand)}
 .chip.on::before{content:"✓ "}
 .chip.all.on::before{content:""}
 .chips{flex-wrap:wrap;overflow:visible!important;padding-left:4px!important;row-gap:10px}
-.selinfo{font-size:13px;margin:-4px 0 8px;color:var(--brand);font-weight:600}
-.tag{display:inline-block;font-size:12px;border-radius:6px;padding:2px 8px;background:var(--chip);color:var(--ink);margin-right:4px}
+.selinfo{font-size:15px;margin:-4px 0 8px;color:var(--brand);font-weight:600}
+.tag{display:inline-block;font-size:14px;border-radius:6px;padding:2px 8px;background:var(--chip);color:var(--ink);margin-right:4px}
 input[type=text],input[type=search],input[type=email],input[type=password],input[type=number],input[type=date],input[type=url],select,textarea{
   width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
 textarea{min-height:84px;resize:vertical}
-label{display:block;font-size:14px;font-weight:600;margin:12px 0 4px}
+label{display:block;font-size:16px;font-weight:600;margin:12px 0 4px}
 .btn{border:0;border-radius:10px;padding:10px 16px;font-weight:600;background:var(--chip);cursor:pointer}
 a.btn{text-decoration:none;color:inherit;display:inline-block}
 .btn.primary{background:var(--brand);color:var(--brand-ink)}
 .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
-.btn.small{padding:6px 10px;font-size:14px}
-.btn.sm{padding:6px 10px;font-size:13px;margin:6px 6px 0 0}
-.animcap{font-weight:600;font-size:14px;min-height:20px;margin-top:6px}
+.btn.small{padding:6px 10px;font-size:16px}
+.btn.sm{padding:6px 10px;font-size:15px;margin:6px 6px 0 0}
+.animcap{font-weight:600;font-size:16px;min-height:20px;margin-top:6px}
 .animbar{display:flex;flex-wrap:wrap}
 .btn:disabled{opacity:.5}
 .fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#1b1b1b;font-size:30px;box-shadow:0 3px 10px rgba(0,0,0,.25);z-index:6}
-.star{border:0;background:none;font-size:22px;line-height:1;padding:2px 4px;color:var(--muted)}
+.star{border:0;background:none;font-size:24px;line-height:1;padding:2px 4px;color:var(--muted)}
 .star.on{color:var(--accent)}
-.drill-title{font-weight:700;font-size:17px;margin:0}
-.section h3{font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:16px 0 4px}
+.drill-title{font-weight:700;font-size:19px;margin:0}
+.section h3{font-size:16px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:16px 0 4px}
 .section p{margin:0 0 4px;white-space:pre-wrap}
 .section ul{margin:2px 0 6px;padding-left:20px}
 .section li{margin:3px 0;line-height:1.35}
 .section p.goal{font-weight:600}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .empty{text-align:center;padding:32px 8px;color:var(--muted)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;max-width:90vw}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:90px;background:#222;color:#fff;padding:10px 16px;border-radius:10px;font-size:16px;z-index:20;max-width:90vw}
 .plan-item{display:flex;gap:8px;align-items:center;border-top:1px solid var(--line);padding:8px 0}
 .plan-item:first-child{border-top:0}
 .plan-item input{width:64px;padding:6px 8px}
-.num{width:26px;height:26px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none}
+.num{width:26px;height:26px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex:none}
 .iconbtn{border:1px solid var(--line);background:var(--card);border-radius:8px;width:32px;height:32px;flex:none}
 dialog{border:0;border-radius:14px;padding:0;width:min(560px,94vw);max-height:86vh;background:var(--card);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
@@ -76,29 +76,29 @@ dialog .dbody{padding:8px 16px 16px;overflow:auto}
 .pick{display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
 .center{max-width:380px;margin:40px auto}
 .back{border:0;background:none;color:var(--brand);font-weight:600;padding:0 0 10px}
-.sumgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:14px}
+.sumgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px;font-size:16px}
 .sumgrid span{margin-right:6px}
 .tl{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .tl:first-child{border-top:0}
 .tl-time{flex:none;width:58px;display:flex;flex-direction:column;align-items:flex-start;border-right:3px solid var(--brand);padding-right:6px}
-.tl-time b{font-size:15px;color:var(--brand)}
-.tl-time span{font-size:12px;color:var(--muted)}
+.tl-time b{font-size:17px;color:var(--brand)}
+.tl-time span{font-size:14px;color:var(--muted)}
 .tl-body{flex:1;min-width:0}
-.tl-meta{font-size:13px;color:var(--muted);margin-top:2px}
+.tl-meta{font-size:15px;color:var(--muted);margin-top:2px}
 .tl-meta .warn{color:#b35c00;font-weight:600}
-.tl-note{font-size:14px;background:var(--chip);border-radius:8px;padding:4px 8px;margin-top:6px;white-space:pre-wrap}
-.tl-desc{margin:6px 0 0;font-size:14px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tl-note{font-size:16px;background:var(--chip);border-radius:8px;padding:4px 8px;margin-top:6px;white-space:pre-wrap}
+.tl-desc{margin:6px 0 0;font-size:16px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .tl-desc.open{display:block;-webkit-line-clamp:unset}
-.tl-more{margin-top:4px;font-size:14px}
-.tl-more summary{color:var(--brand);font-weight:600;cursor:pointer;font-size:12px}
+.tl-more{margin-top:4px;font-size:16px}
+.tl-more summary{color:var(--brand);font-weight:600;cursor:pointer;font-size:14px}
 .tl-more p{margin:4px 0;white-space:pre-wrap}
 .tl-end{padding:8px 0}
-.vid{flex:none;background:#c4302b;color:#fff;text-decoration:none;font-size:13px;font-weight:700;border-radius:8px;padding:5px 9px;white-space:nowrap}
+.vid{flex:none;background:#c4302b;color:#fff;text-decoration:none;font-size:15px;font-weight:700;border-radius:8px;padding:5px 9px;white-space:nowrap}
 .print-only{display:none}
-@media print{.print-only{display:block;font-size:11px;color:#555;word-break:break-all} .tl-desc{display:block;-webkit-line-clamp:unset} .tl-more summary{display:none}}
+@media print{.print-only{display:block;font-size:14px;color:#555;word-break:break-all} .tl-desc{display:block;-webkit-line-clamp:unset} .tl-more summary{display:none}}
 .ddrow{display:flex;gap:8px;margin:10px 0 8px}
 .dd{position:relative;flex:1;min-width:0}
-.ddbtn{width:100%;display:flex;align-items:center;gap:4px;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 10px;font-size:14px;white-space:nowrap;cursor:pointer}
+.ddbtn{width:100%;display:flex;align-items:center;gap:4px;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 10px;font-size:16px;white-space:nowrap;cursor:pointer}
 .ddbtn .ddl{color:var(--muted)}
 .ddbtn b{overflow:hidden;text-overflow:ellipsis}
 .ddbtn .caret{margin-left:auto;padding-left:4px;color:var(--muted)}
@@ -108,43 +108,75 @@ dialog .dbody{padding:8px 16px 16px;overflow:auto}
 .dd:last-child .ddmenu{left:auto;right:0}
 .dd.open .ddmenu{display:block}
 .dd.open .ddbtn .caret{transform:rotate(180deg)}
-.ddopt{display:flex;gap:10px;align-items:center;font-weight:400;margin:0;padding:9px 8px;border-radius:8px;font-size:15px;cursor:pointer}
+.ddopt{display:flex;gap:10px;align-items:center;font-weight:400;margin:0;padding:9px 8px;border-radius:8px;font-size:17px;cursor:pointer}
 .ddopt.on{background:var(--sel);font-weight:700;color:var(--brand)}
 .ddopt input{width:18px;height:18px;accent-color:var(--brand);margin:0;flex:none}
-.ddopt .n{margin-left:auto;color:var(--muted);font-weight:400;font-size:13px}
+.ddopt .n{margin-left:auto;color:var(--muted);font-weight:400;font-size:15px}
 .ddok{width:100%;margin-top:6px}
 .thumb{flex:none;width:112px;border-radius:8px;overflow:hidden;align-self:flex-start;background:#3a9a52;aspect-ratio:3/2}
-.agebar{font-size:14px;margin:-4px 0 10px;color:var(--muted)}
+.agebar{font-size:16px;margin:-4px 0 10px;color:var(--muted)}
 .agebar b{color:var(--brand)}
-.linkbtn{border:0;background:none;color:var(--brand);text-decoration:underline;padding:0 4px;font-size:14px}
+.linkbtn{border:0;background:none;color:var(--brand);text-decoration:underline;padding:0 4px;font-size:16px}
 .agepick{display:flex;flex-wrap:wrap;gap:6px}
-.agepick .chip{font-size:16px;padding:8px 16px}
+.agepick .chip{font-size:18px;padding:8px 16px}
 label.chk{display:inline-flex;gap:4px;align-items:center;font-weight:500;margin:0 10px 0 0}
 .plan{min-height:60px}
 .pi,.po{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);background:var(--card)}
 .pi:first-child,.po:first-child{border-top:0}
-.handle{flex:none;touch-action:none;cursor:grab;font-size:22px;line-height:1;color:var(--muted);padding:6px 4px;user-select:none}
-.pt{flex:none;width:44px;font-weight:700;color:var(--brand);font-size:14px}
-.pn{font-weight:600;font-size:15px;line-height:1.25}
-.pw{font-size:12px;color:#b35c00;font-weight:600}
-.pnote{margin-top:4px;width:100%;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:13px;background:var(--card)}
+.handle{flex:none;touch-action:none;cursor:grab;font-size:24px;line-height:1;color:var(--muted);padding:6px 4px;user-select:none}
+.pt{flex:none;width:44px;font-weight:700;color:var(--brand);font-size:16px}
+.pn{font-weight:600;font-size:17px;line-height:1.25}
+.pw{font-size:14px;color:#b35c00;font-weight:600}
+.pnote{margin-top:4px;width:100%;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:15px;background:var(--card)}
 .dur{flex:none;display:flex;align-items:center;gap:2px}
-.dur button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--chip);font-size:18px;line-height:1}
+.dur button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--chip);font-size:20px;line-height:1}
 .dur b{min-width:22px;text-align:center}
 .dur small{color:var(--muted);margin-right:2px}
-.x{flex:none;border:0;background:none;color:var(--muted);font-size:16px;padding:4px}
-.add{flex:none;width:36px;height:36px;border-radius:50%;border:0;background:var(--brand);color:var(--brand-ink);font-size:22px;line-height:1}
+.x{flex:none;border:0;background:none;color:var(--muted);font-size:18px;padding:4px}
+.add{flex:none;width:36px;height:36px;border-radius:50%;border:0;background:var(--brand);color:var(--brand-ink);font-size:24px;line-height:1}
 .dropempty{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted)}
 .ph{height:46px;border:2px dashed var(--brand);border-radius:10px;margin:4px 0;background:rgba(31,122,63,.06)}
 .ghost{position:fixed;z-index:50;pointer-events:none;opacity:.92;box-shadow:0 8px 24px rgba(0,0,0,.25);border-radius:10px;padding:6px 8px;background:var(--card)}
 .dragging{opacity:.3}
-.savebar{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;background:var(--card);border-top:1px solid var(--line);padding:10px 12px;margin:0 -16px -96px;font-size:14px;font-weight:600;z-index:5}
+.savebar{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;background:var(--card);border-top:1px solid var(--line);padding:10px 12px;margin:0 -16px -96px;font-size:16px;font-weight:600;z-index:5}
 input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
 .sdate{flex:none;width:52px;text-align:center;border-radius:10px;background:var(--chip);padding:6px 0;line-height:1.1}
-.sdate b{display:block;font-size:20px;color:var(--brand)}
-.sdate span{font-size:11px;text-transform:uppercase;color:var(--muted)}
+.sdate b{display:block;font-size:22px;color:var(--brand)}
+.sdate span{font-size:14px;text-transform:uppercase;color:var(--muted)}
 .past{opacity:.6}
 @media print{header,nav.tabs,.fab,.noprint{display:none!important} body{background:#fff;color:#000} .card{box-shadow:none;border-color:#bbb;break-inside:avoid}}
+
+.plusbtn{flex:none;width:52px;height:52px;border-radius:50%;border:0;background:var(--brand);color:var(--brand-ink);font-size:34px;font-weight:700;line-height:1;box-shadow:0 2px 6px rgba(0,0,0,.2);cursor:pointer;align-self:center}
+.bigadd{width:100%;margin:10px 0 4px;padding:14px;font-size:19px}
+.sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);width:100%;max-width:760px;max-height:82vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 4px;font-size:22px}
+.sopt{display:flex;gap:12px;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:12px;margin-top:10px;cursor:pointer}
+.sopt.rec{border:2px solid var(--brand);background:var(--sel)}
+.sopt .sdate{min-width:48px}
+.badge{display:inline-block;font-size:14px;font-weight:700;border-radius:6px;padding:1px 8px;margin-left:6px;vertical-align:middle}
+.badge.draft{background:#fff1cc;color:#8a5a00}
+.badge.ready{background:var(--sel);color:var(--brand)}
+.badge.rec{background:var(--brand);color:var(--brand-ink)}
+.tpl{margin:8px 0 4px}
+.tplbar{display:flex;height:10px;border-radius:6px;overflow:hidden;margin-bottom:6px}
+.tplrow{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:8px 2px;cursor:pointer;color:var(--ink)}
+.tplrow .dot{width:14px;height:14px;border-radius:4px;flex:none}
+.tplv{font-weight:700;white-space:nowrap;border-radius:6px;padding:2px 8px}
+.tplv.ok{background:var(--sel);color:var(--brand)}
+.tplv.under{background:#fff1cc;color:#8a5a00}
+.tplv.over{background:#fde2e2;color:#b42318}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:4px}
+.seg label{flex:1;margin:0;font-weight:600;text-align:center;padding:10px 6px;cursor:pointer;background:var(--card)}
+.seg input{display:none}
+.seg label:has(input:checked){background:var(--brand);color:var(--brand-ink)}
+
+.pi{flex-wrap:wrap;row-gap:4px}
+.pi > .grow{flex:1 1 calc(100% - 110px)}
+.pi .dur{margin-left:auto}
+.pnote{width:100%}
+.thumb{width:96px}
+.fab{right:auto;left:18px}
 </style>
 </head>
 <body>
@@ -483,6 +515,30 @@ const Anim = (() => {
     } };
   };
 
+  SCENES["Bombardování"] = S => {
+    const T = 16, mats = [[70, 70], [150, 70], [230, 70], [70, 150], [150, 150], [230, 150]];
+    S.label("Dvojice u podložek", 150, 12);
+    const P = mats.map(([x, y], i) => {
+      S.mat(x - 22, y + 1, 44, 16);
+      const coach = i === 1;
+      return { x, y, lie: S.kid(S.COL.blue), drop: S.kid(coach ? S.COL.coach : S.COL.yellow, { cap: coach }), b: S.ball(), b2: S.ball(), ph: i * .37, coach };
+    });
+    return { T, caption: t => t < 7 ? "Bombardér za hlavou pouští míček, dítě se převalí na stranu" : t < 8.5 ? "Výměna rolí ve dvojici" : "Č. 2: bombardér hlásí barvu, dítě ji chytí", update(t) {
+      P.forEach((p, i) => {
+        const swap = t >= 8 && !p.coach;
+        const lt = (t + p.ph) % 2.4, fall = S.ramp(lt, .5, 1.1), roll = S.ramp(lt, .8, 1.2) * (1 - S.ramp(lt, 1.9, 2.3));
+        const side = (Math.floor((t + p.ph) / 2.4) % 2) ? 1 : -1;
+        p.lie.set(p.x + 4 + side * roll * 12, p.y + 1, { down: true, moving: false, color: swap ? S.COL.yellow : S.COL.blue });
+        p.drop.set(p.x - 30, p.y - 4, { moving: false, color: p.coach ? S.COL.coach : (swap ? S.COL.blue : S.COL.yellow), tag: p.coach ? (t < 3 ? "Trenér" : null) : (i === 2 && t < 3 ? "Bombardér" : null) });
+        p.drop.dir = 1;
+        const bx = p.x - 20, top = p.y - 16, land = p.y + 9;
+        p.b.set(bx + fall * 18, top + (land - top) * fall * fall, lt < 1.7);
+        const catchIt = t >= 8.5;
+        p.b2.set(bx + 6 + fall * 12, top - 2 + (land - top - 6) * fall * fall, catchIt && lt < 1.1);
+      });
+    } };
+  };
+
   const VB = { "Krádež pokladu": [240, 240] };
 
   function mount(box, name, opt = {}) {
@@ -542,7 +598,7 @@ window.ANIM_SPECS = (window.ANIM_SPECS || []).concat([
     poseLabels: { down: "Dítě leží na zádech na podložce", low: "Bomba padá – dítě se převalí na stranu" },
     coachTag: "Rodič pouští bomby", field: { label: "Podložky" } },
 
-  { drill: "Buď svojím trenérem 3 (U7–U9)", template: "dribble", players: 6, field: { label: "15 × 15 m" }, coachLabel: "Trenér / rodič",
+  { drill: "Buď svojím trenérem 3 (U7–U9)", template: "dribble", players: 6, field: { label: "15 × 15 m" }, coachLabel: "Trenér",
     props: [{ type: "cone", x: 70, y: 60, color: "yellow" }, { type: "cone", x: 150, y: 60, color: "yellow" }, { type: "cone", x: 230, y: 60, color: "yellow" },
             { type: "cone", x: 110, y: 140, color: "yellow" }, { type: "cone", x: 190, y: 140, color: "yellow" }],
     signals: [[3, "target", "Obcházení kloboučků", 4, null, "Kloboučky!"], [9.5, "stop", "Podrážky – míč pod kontrolou", 3, null, "Podrážky!"]],
@@ -912,8 +968,8 @@ window.ANIM_SPECS = (window.ANIM_SPECS || []).concat([
   { drill: "Včelky medonosky", template: "collect", ball: true, source: [150, 45], sourceLabel: "Pyl (barevné mety)",
     zones: [{ x: 70, y: 120, w: 160, h: 52, color: "yellow", label: "Úl", lx: 150, ly: 186 }],
     teams: [{ color: "blue", home: [105, 146], n: 3, label: "Modrá část" }, { color: "red", home: [195, 146], n: 3, label: "Červená část" }],
-    props: [{ type: "gate", x: 150, y: 98, w: 30, color: "orange", label: "Branka – rodič brání", lx: 222, ly: 100 }],
-    captions: [[0, "Včelky s míčem vylétnou z úlu brankou"], [5, "Rodič v brance roztaženýma rukama ztěžuje průlet"], [9, "Pyl odnesou do úlu na místo své barvy"]] },
+    props: [{ type: "gate", x: 150, y: 98, w: 30, color: "orange", label: "Branka – trenér brání", lx: 222, ly: 100 }],
+    captions: [[0, "Včelky s míčem vylétnou z úlu brankou"], [5, "Trenér (nebo hráč) v brance ztěžuje průlet rukama"], [9, "Pyl odnesou do úlu na místo své barvy"]] },
 
   { drill: "Vedení – obrat – výbuch", template: "relay", lanes: 3, perLane: 3, ball: true, x0: 60, x1: 230, turnLabel: "Kužel – obrat",
     field: { label: "15 × 10 m" }, caption: "Vede ke kuželu, obrat podrážkou a rychle zpět („výbuch“)" },
@@ -963,6 +1019,12 @@ window.ANIM_SPECS = (window.ANIM_SPECS || []).concat([
     props: [{ type: "cone", x: 90, y: 70 }, { type: "cone", x: 210, y: 70 }, { type: "cone", x: 150, y: 130 }],
     captions: [[0, "Gepard – rychlé vedení míče"]],
     signals: [[4, "sit", "Krab – pohyb bokem po čtyřech", 3, null, "Krab!"], [9, "stop", "Gorila – dotyky podrážkou na místě", 3, null, "Gorila!"]] },
+]);
+
+window.ANIM_SPECS = (window.ANIM_SPECS || []).concat([
+  { drill: "Fotbal – závěrečná hra", template: "smallgame", n: 4, field: { label: "Závěrečný fotbal – 20 min" },
+    goals: [[22, 100, 180, "blue", 26], [278, 100, 0, "red", 26]],
+    captions: [[0, "Volná hra na dvě branky – každý se dotkne míče"], [8, "Po gólu rozehrává tým vedením míče"]] }
 ]);
 
 /* ===== Šablony animací: každé cvičení = krátká specifikace (ANIM_SPECS) ===== */
@@ -1462,7 +1524,7 @@ function drillCard(d){
   return `<div class="card" data-open="${d.id}" style="cursor:pointer">
     <div class="row" style="align-items:flex-start">${Anim.has(d.name)?`<div class="thumb" data-thumb="${esc(d.name)}"></div>`:""}<div class="grow"><p class="drill-title">${esc(d.name)}</p>
       <div class="muted">${[d.duration_min?d.duration_min+" min":"", players(d), d.coaches_needed?`${d.coaches_needed} trenér${d.coaches_needed>1?"i":""}`:""].filter(Boolean).map(esc).join(" · ")}</div></div>
-      ${isMine(d)?`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}" aria-label="Oblíbené">${d.favorite?"★":"☆"}</button>`:""}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">${isMine(d)?`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}" aria-label="Oblíbené">${d.favorite?"★":"☆"}</button>`:""}<button class="plusbtn" data-addto="${d.id}" aria-label="Přidat do tréninku" title="Přidat do tréninku">+</button></div></div>
     <div style="margin-top:6px"><span class="tag">${CATS[d.category]||d.category}</span>${d.age_groups?.length?`<span class="tag">${ageRange(d.age_groups)}</span>`:""}${d.video_url?`<span class="tag">▶ ${LANG[d.video_lang]||"video"}</span>`:""}${Anim.has(d.name)?`<span class="tag">🎬 animace</span>`:""}${vpaths(d).length?`<span class="tag">▶ video FAČR</span>`:d.xps_video&&!d.video_url?`<span class="tag">▶ video v XPS</span>`:""}${d.source?.startsWith("FAČR")?`<span class="tag">FAČR</span>`:""}${d.checked?`<span class="tag">✓ ověřeno</span>`:""}</div></div>`;
 }
 function renderDrills(){
@@ -1481,7 +1543,7 @@ function renderDrills(){
     </div>
     <div class="chips" style="padding-top:0">
       <button class="chip ${state.onlyFav?"on":""}" data-favf="1">★ Oblíbené</button>
-      <button class="chip ${state.onlyCz?"on":""}" data-cz="1">🇨🇿🇸🇰 Video česky/slovensky</button>
+      <button class="chip ${state.onlyCz?"on":""}" data-cz="1">🇨🇿🇸🇰 Video CZ/SK</button>
     </div>
     <p class="muted" style="margin:0 0 8px">${list.length} cvičení</p>
     <div id="list">${list.map(drillCard).join("") || `<div class="empty">${state.drills.length ? "Nic neodpovídá filtru." : "Zatím tu nejsou žádná cvičení. Přidej vlastní tlačítkem +."}</div>`}</div>`;
@@ -1491,7 +1553,8 @@ function renderDrills(){
   qi.oninput = () => { state.q = qi.value; const pos = qi.selectionStart; renderDrills(); const n=document.getElementById("q"); n.focus(); n.setSelectionRange(pos,pos); };
   app.querySelector("[data-favf]").onclick = () => { state.onlyFav = !state.onlyFav; renderDrills(); };
   app.querySelector("[data-cz]").onclick = () => { state.onlyCz = !state.onlyCz; renderDrills(); };
-  app.querySelectorAll("[data-open]").forEach(c => c.onclick = e => { if(e.target.closest("[data-fav]")) return; showDrill(c.dataset.open); });
+  app.querySelectorAll("[data-open]").forEach(c => c.onclick = e => { if(e.target.closest("[data-fav],[data-addto]")) return; showDrill(c.dataset.open); });
+  app.querySelectorAll("[data-addto]").forEach(b => b.onclick = e => { e.stopPropagation(); pickSession(b.dataset.addto); });
   app.querySelectorAll("[data-fav]").forEach(b => b.onclick = () => toggleField(b.dataset.fav, "favorite"));
 }
 async function toggleField(id, field){
@@ -1521,6 +1584,7 @@ function showDrill(id){
       ${players(d)?`<span class="tag">👥 ${esc(players(d))}</span>`:""}
       ${d.coaches_needed?`<span class="tag">🧑‍🏫 ${d.coaches_needed} trenér${d.coaches_needed>1?"i":""}</span>`:""}
       ${d.area?`<span class="tag">📐 ${esc(d.area)}</span>`:""}</div>
+    <button class="btn primary bigadd noprint" id="addToSession">＋ Přidat do tréninku</button>
     ${videoBlock(d)}
     ${Anim.has(d.name) ? `<div class="section"><h3>🎬 Animace</h3><div id="anim"></div></div>` : ""}
     ${vpaths(d).length ? `<div class="section"><h3>Video z Příručky FAČR</h3>${vpaths(d).map(p=>`<video data-vp="${esc(p)}" controls playsinline preload="metadata" style="width:100%;border-radius:10px;background:#000;margin-bottom:6px"></video>`).join("")}<p class="muted" style="margin:0">Soukromá kopie z XPS, přehraje se jen na tvém účtu.</p></div>`
@@ -1533,6 +1597,7 @@ function showDrill(id){
    </div>`;
   document.getElementById("back").onclick = () => { state.view=null; render(); };
   const ab = document.getElementById("anim"); if(ab) Anim.mount(ab, d.name);
+  document.getElementById("addToSession").onclick = () => pickSession(d.id);
   app.querySelectorAll("video[data-vp]").forEach(async v => {
     const { data, error } = await sb.storage.from("xps-videos").createSignedUrl(v.dataset.vp, 3600);
     if(error || !data?.signedUrl){ v.replaceWith(Object.assign(document.createElement("p"), { className:"muted", textContent:"Video se nepodařilo načíst (je dostupné jen pro účet, který ho nahrál)." })); return; }
@@ -1594,6 +1659,55 @@ function editDrill(d={}){
 }
 
 /* ---------- SESSIONS ---------- */
+const FOTBAL_NAME = "Fotbal – závěrečná hra";
+const TEMPLATE = [
+  { k:"rozcvicka", name:"Rozcvička", min:10, cats:["rozcvicka","koordinace"], col:"#60a5fa" },
+  { k:"pohyb", name:"Pohybové hry", min:20, cats:["pohybova","zabava","rychlost","sila"], col:"#f59e0b" },
+  { k:"mic", name:"Míčová cvičení", min:25, cats:["vedeni","prihravky","strelba"], col:"#a78bfa" },
+  { k:"souboje", name:"Souboje, malé hry", min:15, cats:["souboje","mala_hra"], col:"#f87171" },
+  { k:"fotbal", name:"Fotbal", min:20, fotbal:true, col:"#1f7a3f" }
+];
+const TEMPLATE_TOTAL = TEMPLATE.reduce((a,b)=>a+b.min,0);
+const fotbalDrill = () => state.drills.find(d=>d.name===FOTBAL_NAME);
+const blockOf = d => !d ? null : d.name===FOTBAL_NAME ? TEMPLATE[4] : TEMPLATE.find(b=>!b.fotbal && b.cats.includes(d.category)) || null;
+function rankSessions(){
+  const today = new Date().toISOString().slice(0,10);
+  const key = x => { const up = x.date >= today, draft = x.status !== "ready";
+    const grp = draft && up ? 0 : up ? 1 : draft ? 2 : 3;
+    return [grp, grp < 2 ? x.date : "~" + (99999999 - Number(x.date.replace(/-/g,""))), x.start_time||""]; };
+  return [...state.sessions].sort((a,b)=>{ const A=key(a), B=key(b); return A[0]-B[0] || A[1].localeCompare(B[1]) || A[2].localeCompare(B[2]); });
+}
+function statusBadge(s){ return s.status==="ready" ? `<span class="badge ready">✓ Připravený</span>` : `<span class="badge draft">✎ Rozpracovaný</span>`; }
+function pickSession(drillId){
+  const d = state.drills.find(x=>x.id===drillId); if(!d) return;
+  const today = new Date().toISOString().slice(0,10);
+  const list = rankSessions(), shown = list.filter(x=>x.date>=today || x.status!=="ready").slice(0,8);
+  const bg = document.createElement("div"); bg.className = "sheetbg";
+  const opt = (x,i) => { const dt = new Date(x.date+"T00:00"); const has = (x.session_drills||[]).some(sd=>sd.drill_id===drillId);
+    return `<button type="button" class="sopt ${i===0?"rec":""}" data-sid="${x.id}"><div class="sdate"><span>${dt.toLocaleDateString("cs-CZ",{weekday:"short"})}</span><b>${dt.getDate()}.</b><span>${dt.toLocaleDateString("cs-CZ",{month:"short"})}</span></div>
+      <div class="grow"><div style="font-weight:700">${esc(x.title)}${i===0?`<span class="badge rec">Doporučeno</span>`:""}</div>
+      <div class="muted">${statusBadge(x)} · ${(x.session_drills||[]).length} cvičení · ${sessionTotal(x)} min${has?" · už obsahuje":""}</div></div></button>`; };
+  bg.innerHTML = `<div class="sheet" role="dialog" aria-label="Přidat do tréninku"><h2>Přidat do tréninku</h2><div class="muted">${esc(d.name)} · ${d.duration_min||10} min</div>
+    ${shown.map(opt).join("") || `<p class="muted" style="margin-top:12px">Zatím nemáš žádný rozpracovaný ani nadcházející trénink.</p>`}
+    <button type="button" class="btn bigadd" data-new="1" style="margin-top:14px">＋ Nový trénink s tímto cvičením</button>
+    <button type="button" class="btn" data-close="1" style="width:100%;margin-top:6px">Zrušit</button></div>`;
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.onclick = e => { if(e.target===bg || e.target.closest("[data-close]")) close(); };
+  bg.querySelector("[data-new]").onclick = () => { close(); state.tab = "sessions"; document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab==="sessions")); editSession({ session_drills:[{ drill_id:drillId, duration_min:d.duration_min||10, position:0 }] }); };
+  bg.querySelectorAll("[data-sid]").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    const x = state.sessions.find(y=>y.id===b.dataset.sid);
+    const sds = [...(x.session_drills||[])].sort((a,b)=>a.position-b.position), last = sds[sds.length-1];
+    let pos = last ? last.position + 1 : 0;
+    const fd = fotbalDrill();
+    if(last && fd && last.drill_id===fd.id && drillId!==fd.id){ pos = last.position; const { error:e1 } = await sb.from("session_drills").update({ position:last.position+1 }).eq("id", last.id); if(e1){ b.disabled = false; return fail(e1); } }
+    const { error } = await sb.from("session_drills").insert({ session_id:x.id, drill_id:drillId, duration_min:d.duration_min||10, position:pos });
+    if(error){ b.disabled = false; return fail(error); }
+    close(); await loadSessions(); toast(`Přidáno do: ${x.title} (${new Date(x.date+"T00:00").toLocaleDateString("cs-CZ")})`);
+    if(state.view?.type==="drill") showDrill(drillId);
+  });
+}
 function sessionTotal(s){ return (s.session_drills||[]).reduce((a,x)=>a+(x.duration_min||0),0); }
 function sessionTimes(s){
   const start = toMin(s.start_time);
@@ -1606,7 +1720,7 @@ function renderSessions(){
   const card = (s, isPast) => { const d = new Date(s.date+"T00:00");
     return `<div class="card ${isPast?"past":""}" data-sopen="${s.id}" style="cursor:pointer"><div class="row" style="align-items:flex-start">
       <div class="sdate"><span>${d.toLocaleDateString("cs-CZ",{weekday:"short"})}</span><b>${d.getDate()}.</b><span>${d.toLocaleDateString("cs-CZ",{month:"short"})}</span></div>
-      <div class="grow"><p class="drill-title">${esc(s.title)}</p>
+      <div class="grow"><p class="drill-title">${esc(s.title)} ${statusBadge(s)}</p>
       <div class="muted">${s.start_time?sessionTimes(s)+" · ":""}${(s.session_drills||[]).length} cvičení · ${sessionTotal(s)} min${s.players_expected?` · 👥 ${s.players_expected}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div></div></div></div>`; };
   app.innerHTML = state.sessions.length
     ? (upcoming.length?`<h3 class="muted" style="margin:0 0 8px">Nadcházející</h3>${upcoming.map(s=>card(s,false)).join("")}`:`<div class="empty">Žádný nadcházející trénink. Tlačítkem + ho poskládáš.</div>`)
@@ -1679,6 +1793,9 @@ function showSession(id){
 function editSession(s={}){
   state.view = { type:"editSession" }; fab.hidden = true;
   const items = [...(s.session_drills||[])].sort((a,b)=>a.position-b.position).map(x=>({ drill_id:x.drill_id, duration_min:x.duration_min||10, note:x.note||"" }));
+  const FD = fotbalDrill();
+  if(!s.id && FD && !items.some(x=>x.drill_id===FD.id)) items.push({ drill_id:FD.id, duration_min:20, note:"" });
+  const endPos = () => items.length && FD && items[items.length-1].drill_id===FD.id ? items.length-1 : items.length;
   const today = new Date().toISOString().slice(0,10);
   const pickCats = new Set(state.cats), pickAges = new Set(state.ages); let pickQ = "";
   app.innerHTML = `<button class="back" id="back">‹ Zpět</button>
@@ -1692,9 +1809,14 @@ function editSession(s={}){
         <div><label>🧑‍🏫 Trenérů</label><input type="number" name="coaches" min="1" max="10" value="${esc(s.coaches??"")}"></div>
         <div><label>👥 Dětí</label><input type="number" name="players_expected" min="1" max="60" value="${esc(s.players_expected??"")}"></div>
       </div>
+      <label>Stav tréninku</label>
+      <div class="seg"><label><input type="radio" name="status" value="draft" ${s.status!=="ready"?"checked":""}> ✎ Rozpracovaný</label><label><input type="radio" name="status" value="ready" ${s.status==="ready"?"checked":""}> ✓ Připravený</label></div>
       <details style="margin-top:8px"><summary class="muted">Poznámka k tréninku</summary><textarea name="note" placeholder="Téma, docházka, co se povedlo…">${esc(s.note||"")}</textarea></details>
     </div>
     <div class="card">
+      <div class="row"><strong class="grow">Doporučená šablona (${TEMPLATE_TOTAL} min)</strong><button type="button" class="linkbtn" id="sortTpl">Seřadit podle šablony</button></div>
+      <div id="tpl" class="tpl"></div>
+      <p class="muted" style="margin:2px 0 12px">Klepnutím na část šablony se zásobník vyfiltruje na vhodné typy cvičení.</p>
       <div class="row"><strong class="grow">Rozvrh tréninku</strong><span class="muted" id="tot"></span></div>
       <p class="muted" style="margin:2px 0 8px">Přetáhni cvičení za úchyt ⠿ ze zásobníku sem, nebo klepni na +. Pořadí měníš přetažením, délku tlačítky − / +.</p>
       <div id="plan" class="plan"></div>
@@ -1710,7 +1832,19 @@ function editSession(s={}){
   const form = document.getElementById("sf"), plan = document.getElementById("plan"), pool = document.getElementById("pool");
   const findD = id => state.drills.find(x=>x.id===id);
 
+  function drawTpl(){
+    const act = {}; items.forEach(it => { const b = blockOf(findD(it.drill_id)); const k = b ? b.k : "jine"; act[k] = (act[k]||0) + (Number(it.duration_min)||0); });
+    let t0 = 0;
+    const st = toMin(form.start_time.value);
+    document.getElementById("tpl").innerHTML = `<div class="tplbar">${TEMPLATE.map(b=>`<div style="flex:${b.min};background:${b.col}"></div>`).join("")}</div>` + TEMPLATE.map(b => {
+      const a = act[b.k]||0, diff = a - b.min, from = t0; t0 += b.min;
+      const cls = Math.abs(diff) <= 3 ? "ok" : diff < 0 ? "under" : "over";
+      return `<button type="button" class="tplrow" data-blk="${b.k}"><span class="dot" style="background:${b.col}"></span><span class="grow"><b>${b.name}</b><br><span class="muted">${st!=null?`${hhmm(st+from)}–${hhmm(st+from+b.min)}`:`${from}.–${from+b.min}. min`}</span></span><span class="tplv ${cls}">${a} / ${b.min} min</span></button>`;
+    }).join("") + (act.jine ? `<div class="muted" style="margin-top:4px">Ostatní: ${act.jine} min</div>` : "");
+    document.querySelectorAll("[data-blk]").forEach(el => el.onclick = () => { const b = TEMPLATE.find(x=>x.k===el.dataset.blk); if(b.fotbal){ if(FD && !items.some(x=>x.drill_id===FD.id)){ items.push({ drill_id:FD.id, duration_min:20, note:"" }); drawPlan(); drawPool(); } return; } pickCats.clear(); b.cats.forEach(c=>pickCats.add(c)); drawPool(); document.getElementById("pq").scrollIntoView({ behavior:"smooth", block:"center" }); });
+  }
   function totals(){
+    drawTpl();
     const sum = items.reduce((a,x)=>a+(Number(x.duration_min)||0),0);
     const st = toMin(form.start_time.value);
     const txt = `${items.length} cvičení · ${sum} min${st!=null?` · ${hhmm(st)}–${hhmm(st+sum)}`:""}`;
@@ -1766,7 +1900,7 @@ function editSession(s={}){
           <div class="muted" style="font-size:12px">${CATS[d.category]} · ${d.duration_min||10} min${d.coaches_needed>1?` · 🧑‍🏫 ${d.coaches_needed}`:""}${d.xps_video||d.video_url?" · ▶":""}</div></div>
         <button type="button" class="add" data-add="${d.id}" aria-label="Přidat na konec">+</button>
       </div>`).join("") || `<p class="muted">Nic nenalezeno.</p>`;
-    pool.querySelectorAll("[data-add]").forEach(b => b.onclick = () => { addDrill(b.dataset.add, items.length); });
+    pool.querySelectorAll("[data-add]").forEach(b => b.onclick = () => { addDrill(b.dataset.add, endPos()); });
     pool.querySelectorAll('[data-h="pool"]').forEach(h => h.onpointerdown = e => startDrag(e, { type:"pool", id:h.closest(".po").dataset.id }, h.closest(".po")));
   }
   function addDrill(id, at){ const d=findD(id); items.splice(at,0,{ drill_id:id, duration_min:d?.duration_min||10, note:"" }); drawPlan(); drawPool(); toast("Přidáno: "+(d?.name||"")); }
@@ -1816,6 +1950,7 @@ function editSession(s={}){
   document.getElementById("pq").oninput = e => { pickQ = e.target.value; drawPool(); };
   form.start_time.oninput = totals; form.coaches.oninput = totals; form.players_expected.oninput = totals;
   drawPlan(); drawPool();
+  document.getElementById("sortTpl").onclick = () => { const ord = it => { const b = blockOf(findD(it.drill_id)); return b ? TEMPLATE.indexOf(b) : 3.5; }; items.sort((a,b)=>ord(a)-ord(b)); drawPlan(); drawPool(); toast("Seřazeno podle šablony"); };
   document.getElementById("back").onclick = () => s.id ? showSession(s.id) : (state.view=null, render());
   form.onsubmit = async e => {
     e.preventDefault();
