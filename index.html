@@ -48,6 +48,9 @@ a.btn{text-decoration:none;color:inherit;display:inline-block}
 .btn.primary{background:var(--brand);color:var(--brand-ink)}
 .btn.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
 .btn.small{padding:6px 10px;font-size:14px}
+.btn.sm{padding:6px 10px;font-size:13px;margin:6px 6px 0 0}
+.animcap{font-weight:600;font-size:14px;min-height:20px;margin-top:6px}
+.animbar{display:flex;flex-wrap:wrap}
 .btn:disabled{opacity:.5}
 .fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:#1b1b1b;font-size:30px;box-shadow:0 3px 10px rgba(0,0,0,.25);z-index:6}
 .star{border:0;background:none;font-size:22px;line-height:1;padding:2px 4px;color:var(--muted)}
@@ -138,6 +141,352 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 <dialog id="pickDlg"><div class="dhead"><strong class="grow">Přidat cvičení do tréninku</strong><button class="btn small" id="pickClose">Hotovo</button></div><div class="dbody"><input type="search" id="pickSearch" placeholder="Hledat…"><div id="pickList"></div></div></dialog>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>/*ANIM*/
+/* ===== Animace cvičení: jednoduchý SVG engine + scény ===== */
+const Anim = (() => {
+  const NS = "http://www.w3.org/2000/svg";
+  const COL = { blue: "#2563eb", red: "#dc2626", ice: "#38bdf8", yellow: "#eab308", coach: "#111827", sick: "#65a30d", orange: "#f97316" };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  const lerp = (a, b, u) => [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u];
+  const ramp = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+
+  function stage(svg, vb) {
+    const [W, H] = vb;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = "";
+    const el = (tag, attrs = {}, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.appendChild(e); return e; };
+    const L = { field: el("g"), stuff: el("g"), players: el("g"), balls: el("g"), labels: el("g"), hud: el("g") };
+    for (let i = 0; i < Math.ceil(H / 30); i++) el("rect", { x: 0, y: i * 30, width: W, height: 15, fill: "#43a55b" }, L.field);
+
+    const S = { W, H, el, L, COL, lerp, ease, ramp, clamp, time: 0 };
+
+    S.label = (text, x, y, color = "#1b2420", parent = L.labels) => {
+      const g = el("g", {}, parent);
+      const r = el("rect", { height: 12, rx: 6, fill: "#fff", "fill-opacity": .93 }, g);
+      const t = el("text", { "text-anchor": "middle", "font-size": 7.5, "font-weight": 700, fill: color, "dominant-baseline": "central" }, g);
+      g.set = (tx, px, py) => {
+        if (tx != null && t.textContent !== tx) { t.textContent = tx; g._w = t.getComputedTextLength() + 9; }
+        const w = g._w || 20, cx = clamp(px, w / 2 + 2, W - w / 2 - 2), cy = clamp(py, 8, H - 8);
+        t.setAttribute("x", cx); t.setAttribute("y", cy); r.setAttribute("x", cx - w / 2); r.setAttribute("y", cy - 6); r.setAttribute("width", w);
+      };
+      g.show = v => g.setAttribute("visibility", v ? "visible" : "hidden");
+      g.set(text, x, y); return g;
+    };
+    S.area = (x, y, w, h, opt = {}) => el("rect", { x, y, width: w, height: h, rx: opt.rx ?? 3, fill: opt.fill || "none", "fill-opacity": opt.fo ?? 1, stroke: opt.stroke || "#fff", "stroke-width": opt.sw ?? 1.5, "stroke-dasharray": opt.dash ?? "5 4" }, L.field);
+    S.cone = (x, y, c = "#f97316") => { const g = el("g", { transform: `translate(${x},${y})` }, L.stuff); el("path", { d: "M-3 2.5 L0 -4 L3 2.5 Z", fill: c, stroke: "#7c2d12", "stroke-width": .4 }, g); return g; };
+    S.goal = (x, y, ang = 0, w = 26) => { // ang: kam míří ústí branky (stupně), 0 = doprava
+      const g = el("g", { transform: `translate(${x},${y}) rotate(${ang})` }, L.stuff);
+      el("rect", { x: -9, y: -w / 2, width: 9, height: w, fill: "#fff", "fill-opacity": .35 }, g);
+      for (let i = 1; i < 5; i++) el("line", { x1: -9, y1: -w / 2 + i * w / 5, x2: 0, y2: -w / 2 + i * w / 5, stroke: "#fff", "stroke-width": .5 }, g);
+      el("path", { d: `M0 ${-w / 2} L-9 ${-w / 2} L-9 ${w / 2} L0 ${w / 2}`, fill: "none", stroke: "#fff", "stroke-width": 2.4, "stroke-linejoin": "round" }, g);
+      el("path", { d: "M3 0 l5 -3 v6 z", fill: "#fde047" }, g);
+      return g;
+    };
+    S.ladder = (x, y, len, rungs = 7) => { const g = el("g", {}, L.stuff); el("rect", { x, y: y - 5, width: len, height: 10, fill: "none", stroke: "#facc15", "stroke-width": 1.2 }, g); for (let i = 1; i < rungs; i++) el("line", { x1: x + i * len / rungs, y1: y - 5, x2: x + i * len / rungs, y2: y + 5, stroke: "#facc15", "stroke-width": 1.2 }, g); return g; };
+    S.hurdle = (x, y) => { const g = el("g", { transform: `translate(${x},${y})` }, L.stuff); el("path", { d: "M-5 4 L-5 -2 L5 -2 L5 4", fill: "none", stroke: "#f43f5e", "stroke-width": 1.6 }, g); return g; };
+    S.mat = (x, y, w, h, c = "#60a5fa") => el("rect", { x, y, width: w, height: h, rx: 2, fill: c, "fill-opacity": .75, stroke: "#1e3a8a", "stroke-width": .8 }, L.field);
+
+    S.kid = (color, opt = {}) => {
+      const g = el("g", {}, L.players), body = el("g", {}, g);
+      el("ellipse", { cx: 0, cy: 12, rx: 6, ry: 1.8, fill: "#000", "fill-opacity": .18 }, body);
+      const legL = el("line", { x1: -1.6, y1: 5, x2: -2, y2: 11.5, stroke: "#2b2b2b", "stroke-width": 2.2, "stroke-linecap": "round" }, body);
+      const legR = el("line", { x1: 1.6, y1: 5, x2: 2, y2: 11.5, stroke: "#2b2b2b", "stroke-width": 2.2, "stroke-linecap": "round" }, body);
+      el("rect", { x: -3.6, y: 3, width: 7.2, height: 3.4, rx: 1, fill: "#1f2937" }, body);
+      const armL = el("line", { x1: -3.8, y1: -2, x2: -6, y2: 3, stroke: "#f1c9a5", "stroke-width": 1.8, "stroke-linecap": "round" }, body);
+      const armR = el("line", { x1: 3.8, y1: -2, x2: 6, y2: 3, stroke: "#f1c9a5", "stroke-width": 1.8, "stroke-linecap": "round" }, body);
+      const shirt = el("rect", { x: -4.2, y: -4, width: 8.4, height: 8, rx: 2.4, fill: color }, body);
+      const head = el("circle", { cx: 0, cy: -7.8, r: 3.6, fill: "#f1c9a5" }, body);
+      el("path", { d: "M-3.6 -8.5 Q0 -13 3.6 -8.5 Q0 -10.5 -3.6 -8.5 Z", fill: opt.hair || "#5b3a1e" }, body);
+      const crown = el("path", { d: "M-4 -11 L-4 -15 L-2 -13 L0 -16 L2 -13 L4 -15 L4 -11 Z", fill: "#e0f2fe", stroke: "#0284c7", "stroke-width": .5, visibility: opt.crown ? "visible" : "hidden" }, body);
+      const cap = el("path", { d: "M-4 -9 Q0 -14 4 -9 L7 -9 L4 -8 Z", fill: "#111827", visibility: opt.cap ? "visible" : "hidden" }, body);
+      const ice = el("rect", { x: -7, y: -13, width: 14, height: 26, rx: 4, fill: "#bae6fd", "fill-opacity": .55, stroke: "#7dd3fc", "stroke-width": .8, visibility: "hidden" }, g);
+      const carry = el("path", { d: "M-3 2 Q0 -3.5 3 2 Z", fill: "#f2b705", stroke: "#b88700", "stroke-width": .5, visibility: "hidden", transform: "translate(6,-4)" }, body);
+      const tag = S.label("", 0, 0, color, L.labels); tag.show(false);
+      const k = { g, color, x: 0, y: 0, idx: S._kids = (S._kids || 0) + 1 };
+      k.set = (x, y, st = {}) => {
+        const dx = x - (k.x ?? x), dy = y - (k.y ?? y), moving = st.moving ?? (Math.hypot(dx, dy) > .05);
+        k.dir = Math.abs(dx) > .03 ? Math.sign(dx) : (k.dir || 1); k.x = x; k.y = y; k.moving = moving;
+        if (st.color && st.color !== k._c) { shirt.setAttribute("fill", st.color); k._c = st.color; }
+        const sw = moving ? Math.sin(S.time * 14 + k.idx) : 0;
+        const up = st.frozen ? 1 : 0;
+        legL.setAttribute("x2", -2 + sw * 2.6 - up * 1.5); legR.setAttribute("x2", 2 - sw * 2.6 + up * 1.5);
+        armL.setAttribute("x2", -6 - sw * 1.6 - up); armL.setAttribute("y2", up ? -7 : 3);
+        armR.setAttribute("x2", 6 + sw * 1.6 + up); armR.setAttribute("y2", up ? -7 : 3);
+        const hop = st.hop ? -3.5 * Math.abs(Math.sin(S.time * 9)) : 0;
+        body.setAttribute("transform", st.down ? `translate(0,8) rotate(-90) scale(.95,1)` : `translate(0,${hop}) scale(${k.dir},1)`);
+        head.setAttribute("fill", st.sick ? "#bef264" : "#f1c9a5");
+        g.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+        g.setAttribute("opacity", st.alpha ?? 1);
+        ice.setAttribute("visibility", st.frozen ? "visible" : "hidden");
+        crown.setAttribute("visibility", (st.crown ?? opt.crown) ? "visible" : "hidden");
+        carry.setAttribute("visibility", st.carry ? "visible" : "hidden");
+        if (st.tag) { tag.set(st.tag, x, st.tagBelow ? y + 22 : y - 22); tag.show(true); } else tag.show(false);
+      };
+      return k;
+    };
+    S.ball = () => {
+      const b = el("g", {}, L.balls);
+      el("circle", { r: 2.6, fill: "#fff", stroke: "#333", "stroke-width": .6 }, b);
+      el("path", { d: "M-1 -1 L1 -1 L1.4 .8 L0 1.8 L-1.4 .8 Z", fill: "#333" }, b);
+      b.set = (x, y, vis = true) => { b.setAttribute("transform", `translate(${x.toFixed(1)},${y.toFixed(1)})`); b.setAttribute("visibility", vis ? "visible" : "hidden"); };
+      return b;
+    };
+    S.foot = k => [k.x + (k.dir || 1) * 6, k.y + 11];
+    // Pohyb po klíčových bodech: [[t,x,y,{flags}],...]; vrací {x,y,...flags platné v úseku}
+    S.track = keys => t => {
+      if (t <= keys[0][0]) return { x: keys[0][1], y: keys[0][2], ...(keys[0][3] || {}) };
+      for (let i = 1; i < keys.length; i++) {
+        const a = keys[i - 1], b = keys[i];
+        if (t <= b[0]) { const u = ease((t - a[0]) / (b[0] - a[0] || 1)); return { x: a[1] + (b[1] - a[1]) * u, y: a[2] + (b[2] - a[2]) * u, ...(a[3] || {}) }; }
+      }
+      const z = keys[keys.length - 1]; return { x: z[1], y: z[2], ...(z[3] || {}) };
+    };
+    // Periodické "bloudění" hráče po prostoru (perioda T, aby smyčka navazovala)
+    S.wander = (i, box, T) => t => {
+      const w = 2 * Math.PI / T, [x0, y0, x1, y1] = box, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, ax = (x1 - x0) / 2, ay = (y1 - y0) / 2;
+      const p = i * 1.7;
+      return {
+        x: cx + ax * (.62 * Math.sin(w * (1 + i % 3) * t + p) + .3 * Math.sin(w * (2 + i % 2) * t + 2 * p)),
+        y: cy + ay * (.62 * Math.cos(w * (1 + (i + 1) % 3) * t + 1.3 * p) + .3 * Math.sin(w * 3 * t + p))
+      };
+    };
+    return S;
+  }
+
+  /* ---------- SCÉNY ---------- */
+  const SCENES = {};
+
+  SCENES["Krádež pokladu"] = S => {
+    const T = 16, W = S.W;
+    S.area(12, 12, W - 24, S.H - 24);
+    const houses = [[40, 38, "blue"], [W - 40, S.H - 38, "blue"], [W - 40, 38, "red"], [40, S.H - 38, "red"]];
+    houses.forEach(([x, y, c]) => { S.area(x - 20, y - 20, 40, 40, { fill: S.COL[c], fo: .15, stroke: S.COL[c], dash: "", rx: 5 }); S.el("path", { d: `M${x - 8} ${y - 2} L${x} ${y - 10} L${x + 8} ${y - 2} Z`, fill: S.COL[c], "fill-opacity": .5 }, S.L.field); S.label(c === "blue" ? "Domeček modrých" : "Domeček červených", x, y < S.H / 2 ? y + 27 : y - 27, S.COL[c]); });
+    const C = [W / 2, S.H / 2];
+    S.el("circle", { cx: C[0], cy: C[1], r: 22, fill: "#f2b705", "fill-opacity": .16, stroke: "#f2b705", "stroke-width": 1.8 }, S.L.field);
+    S.el("rect", { x: C[0] - 9, y: C[1] - 6, width: 18, height: 11, rx: 2, fill: "#8b5a2b" }, S.L.field);
+    S.label("Truhla", C[0], C[1] + 30, "#8a5a00"); S.label("Poklad", C[0], C[1] - 30, "#8a5a00");
+    const tre = []; for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; tre.push(S.el("path", { d: "M-3.5 2.5 Q0 -4 3.5 2.5 Z", fill: "#f2b705", stroke: "#b88700", "stroke-width": .6, transform: `translate(${C[0] + Math.cos(a) * 16},${C[1] + Math.sin(a) * 16})` }, S.L.stuff)); }
+    const P = [0, 1, 2, 3].map(i => { const h = houses[i]; return { h, k: S.kid(S.COL[h[2]]), b: S.ball(), d: i * .9 }; });
+    const store = houses.map(() => 0);
+    return { T, caption: t => t < 8 ? "Hráči vedou míč k truhle a berou poklad" : "S pokladem a míčem u nohy zpět do domečku, míč kryjí tělem", update(t) {
+      const got = [0, 0, 0, 0];
+      P.forEach((p, i) => {
+        const home = [p.h[0], p.h[1]], cyc = 7.2, lt = ((t - p.d) % cyc + cyc) % cyc, n = Math.floor((t - p.d) / cyc);
+        let pos, carry = false, target = C;
+        if (t < p.d) pos = home;
+        else if (lt < 3) pos = S.lerp(home, C, S.ease(lt / 3) * .8);
+        else if (lt < 3.6) pos = S.lerp(home, C, .8);
+        else { pos = S.lerp(S.lerp(home, C, .8), home, S.ease((lt - 3.6) / 3.4)); carry = lt < 7; target = home; }
+        p.k.set(pos[0], pos[1], { carry });
+        got[i] = Math.max(0, n) + (t >= p.d && lt >= 7 ? 1 : 0);
+        const a = Math.atan2(target[1] - pos[1], target[0] - pos[0]);
+        p.b.set(pos[0] + Math.cos(a) * 7, pos[1] + 11 + Math.sin(a) * 3);
+      });
+      const taken = P.reduce((s, p, i) => s + Math.max(0, Math.floor((t - p.d + 7.2 - 3.3) / 7.2)), 0);
+      tre.forEach((e, i) => e.setAttribute("visibility", i < 8 - taken ? "visible" : "hidden"));
+    } };
+  };
+
+  SCENES["Bacily"] = S => {
+    const T = 20, box = [30, 30, 225, 170];
+    S.area(20, 20, 215, 160); S.label("Hřiště", 127, 14);
+    S.mat(248, 70, 42, 60); S.label("Lékárna (žíněnka)", 262, 142, "#1e3a8a");
+    S.el("path", { d: "M266 94 h6 v-6 h6 v6 h6 v6 h-6 v6 h-6 v-6 h-6 z", fill: "#fff", transform: "translate(-7,0)" }, S.L.stuff);
+    const kids = [0, 1, 2, 3, 4, 5].map(i => ({ k: S.kid(S.COL.blue), w: S.wander(i, box, T) }));
+    const bac = [0, 1].map(i => ({ k: S.kid(S.COL.red), w: S.wander(i + 7, box, T) }));
+    // události: bacil tagne oběť, dva doktoři ji odtáhnou do lékárny, uzdraví se, vrací se
+    const ev = [{ v: 0, b: 0, r: [1, 2], t0: 3 }, { v: 3, b: 1, r: [4, 5], t0: 12 }];
+    const MAT = [262, 100];
+    function state(t) {
+      const pos = kids.map(o => ({ ...o.w(t) })), st = kids.map(() => ({})), bp = bac.map(o => ({ ...o.w(t) }));
+      for (const e of ev) {
+        const a = e.t0, P = kids[e.v].w(a);
+        // bacil se přiblíží k oběti
+        const u = S.ramp(t, a - 1.6, a) * (1 - S.ramp(t, a + .4, a + 1.8));
+        const vp = kids[e.v].w(Math.min(t, a));
+        bp[e.b] = { x: bp[e.b].x + (vp.x - bp[e.b].x) * u, y: bp[e.b].y + (vp.y - bp[e.b].y) * u };
+        const drag0 = a + 2, drag1 = a + 5, heal1 = a + 6.5, back1 = a + 8;
+        if (t >= a && t < back1) {
+          let p;
+          if (t < drag0) p = P; else if (t < drag1) p = S.lerp([P.x, P.y], MAT, S.ease((t - drag0) / (drag1 - drag0))), p = { x: p[0], y: p[1] }; else if (t < heal1) p = { x: MAT[0], y: MAT[1] }; else { const w = kids[e.v].w(back1); const q = S.lerp(MAT, [w.x, w.y], S.ease((t - heal1) / (back1 - heal1))); p = { x: q[0], y: q[1] }; }
+          pos[e.v] = p; st[e.v] = t < heal1 ? { down: t < drag1, sick: true, tag: t < a + .5 ? null : (t < drag1 ? "Nemocný" : "Uzdravuje se") } : {};
+        }
+        if (t >= a) st[e.v].tag = st[e.v].tag || null;
+        e.r.forEach((ri, j) => {
+          const off = j ? 7 : -7;
+          const go = S.ramp(t, a + .2, drag0), ret = S.ramp(t, drag1, drag1 + 1.5);
+          if (t > a && t < drag1 + 1.5) {
+            const tgt = { x: pos[e.v].x - 6, y: pos[e.v].y + off };
+            const base = kids[ri].w(t);
+            const k = t < drag0 ? go : (t < drag1 ? 1 : 1 - ret);
+            pos[ri] = { x: base.x + (tgt.x - base.x) * k, y: base.y + (tgt.y - base.y) * k };
+            if (t >= drag0 && t < drag1) st[ri] = { tag: j ? null : "Doktoři táhnou", tagBelow: true };
+          }
+        });
+        if (t >= a - .3 && t < a + .8) bac[e.b].hit = true;
+      }
+      return { pos, st, bp };
+    }
+    return { T, caption: t => {
+      for (const e of ev) { if (t >= e.t0 - 1.6 && t < e.t0 + .5) return "Bacil honí a dotkne se hráče – hráč onemocní"; if (t >= e.t0 + .5 && t < e.t0 + 5) return "Dva doktoři nemocného odtáhnou do lékárny"; if (t >= e.t0 + 5 && t < e.t0 + 8) return "V lékárně se uzdraví a vrací se do hry"; }
+      return "Bacilové (červení) honí, ostatní utíkají";
+    }, update(t) {
+      const { pos, st, bp } = state(t);
+      kids.forEach((o, i) => o.k.set(pos[i].x, pos[i].y, st[i]));
+      bac.forEach((o, i) => o.k.set(bp[i].x, bp[i].y, { tag: ev.some(e => e.b === i && t > e.t0 - .2 && t < e.t0 + 1.2) ? null : "Bacil" }));
+    } };
+  };
+
+  SCENES["Mrazík"] = S => {
+    const T = 18, box = [34, 34, 266, 166];
+    S.area(20, 20, 260, 160); S.label("Vymezený prostor", 150, 14);
+    const kids = [0, 1, 2, 3, 4, 5, 6].map(i => ({ k: S.kid(S.COL.blue), b: S.ball(), w: S.wander(i, box, T) }));
+    const mraz = [0, 1].map(i => ({ k: S.kid("#7dd3fc", { crown: true }), w: S.wander(i + 9, box, T) }));
+    const ev = [{ v: 0, m: 0, tf: 3, r: 1, tr: 6.5 }, { v: 2, m: 1, tf: 7.5, r: 3, tr: 11 }, { v: 4, m: 0, tf: 12.5, r: 5, tr: 16 }];
+    return { T, caption: t => {
+      for (const e of ev) { if (t >= e.tf - 1.5 && t < e.tf + .6) return "Mrazík chytí hráče – hráč zmrzne na místě"; if (t >= e.tr - 1.8 && t < e.tr + .6) return "Spoluhráč ho dotykem osvobodí"; }
+      return "Hráči vedou míč a utíkají před mrazíky";
+    }, update(t) {
+      const pos = kids.map(o => o.w(t)), st = kids.map(() => ({})), mp = mraz.map(o => o.w(t));
+      for (const e of ev) {
+        const P = kids[e.v].w(e.tf);
+        const u = S.ramp(t, e.tf - 1.5, e.tf) * (1 - S.ramp(t, e.tf + .3, e.tf + 1.8));
+        const vp = kids[e.v].w(Math.min(t, e.tf));
+        mp[e.m] = { x: mp[e.m].x + (vp.x + 8 - mp[e.m].x) * u, y: mp[e.m].y + (vp.y - mp[e.m].y) * u };
+        if (t >= e.tf && t < e.tr) { pos[e.v] = P; st[e.v] = { frozen: true, moving: false, tag: "Zmrazený" }; }
+        else if (t >= e.tr && t < e.tr + 1.2) { const w = kids[e.v].w(e.tr + 1.2), q = S.lerp([P.x, P.y], [w.x, w.y], S.ease((t - e.tr) / 1.2)); pos[e.v] = { x: q[0], y: q[1] }; }
+        const ur = S.ramp(t, e.tr - 1.8, e.tr) * (1 - S.ramp(t, e.tr + .2, e.tr + 1.6));
+        if (ur > 0) { const b = kids[e.r].w(t); pos[e.r] = { x: b.x + (P.x - 9 - b.x) * ur, y: b.y + (P.y - b.y) * ur }; if (ur > .9) st[e.r] = { tag: "Osvobozuje" }; }
+      }
+      kids.forEach((o, i) => { o.k.set(pos[i].x, pos[i].y, st[i]); const f = S.foot(o.k); o.b.set(st[i].frozen ? pos[i].x + 3 : f[0], st[i].frozen ? pos[i].y + 12 : f[1]); });
+      mraz.forEach((o, i) => o.k.set(mp[i].x, mp[i].y, { tag: "Mrazík" }));
+    } };
+  };
+
+  SCENES["Rybičky, rybáři"] = S => {
+    const T = 20, L = 45, R = 255;
+    S.area(L, 20, R - L, 160, { fill: "#0ea5e9", fo: .18, stroke: "#bae6fd", dash: "" });
+    S.label("Rybník", 150, 190, "#0369a1"); S.label("Břeh", 24, 30); S.label("Břeh", 276, 30);
+    [L, R].forEach(x => { for (let y = 28; y <= 172; y += 24) S.cone(x, y, "#f97316"); });
+    const fish = [0, 1, 2, 3, 4, 5].map(i => ({ k: S.kid(S.COL.blue), lane: 40 + i * 24 }));
+    const fishers = [{ k: S.kid(S.COL.red), start: 100 }];
+    const caught = { 2: 0, 0: 1, 4: 1, 1: 2, 5: 2, 3: 3 }; // v kterém kole je rybička chycena
+    const catchX = { 2: 150, 0: 160, 4: 140, 1: 145, 5: 160, 3: 150 };
+    const rounds = [0, 5, 10, 15];
+    const side = r => (r % 2 === 0 ? [22, 278] : [278, 22]);
+    const fisherSpots = n => Array.from({ length: n }, (_, j) => 100 + (j - (n - 1) / 2) * 26);
+    return { T, caption: t => {
+      const r = Math.min(3, Math.floor(t / 5)), lt = t - rounds[r];
+      if (lt < .7) return `${r + 1}. kolo – rybičky čekají na břehu`;
+      if (lt < 3.8) return "Rybičky probíhají rybníkem, rybáři je chytají";
+      return r === 3 ? "Chycená rybička se stává rybářem – nová hra" : "Kdo byl chycen, stává se rybářem";
+    }, update(t) {
+      const r = Math.min(3, Math.floor(t / 5)), lt = t - rounds[r], [x0, x1] = side(r);
+      fish.forEach((f, i) => {
+        const c = caught[i];
+        let x, y = f.lane, st = {};
+        if (c < r) { // už je rybář
+          const n = Object.values(caught).filter(v => v < r).length + 1, idx = Object.entries(caught).filter(([, v]) => v < r).map(([k]) => +k).indexOf(i) + 1;
+          const sy = fisherSpots(n)[idx];
+          const ty = (lt > .7 && lt < 3.8) ? sy + Math.sin(t * 3 + i) * 10 : sy;
+          f.k.set(150 + (idx % 2 ? 8 : -8), ty, { color: S.COL.red, tag: idx === 1 && lt < 3.8 && lt > .7 ? null : null }); return;
+        }
+        const u = S.ease(S.ramp(lt, .7, 3.6));
+        x = x0 + (x1 - x0) * u; y += Math.sin(u * Math.PI * 3 + i) * 9 * (u > 0 && u < 1);
+        if (c === r) {
+          const cu = (catchX[i] - x0) / (x1 - x0);
+          if (u >= cu) { x = catchX[i]; y = f.lane + Math.sin(cu * Math.PI * 3 + i) * 9; st = { tag: lt < 4.4 ? "Chycena!" : null, color: lt > 3.8 ? S.COL.red : S.COL.blue, moving: false }; }
+        }
+        f.k.set(x, y, { color: S.COL.blue, ...st });
+      });
+      // hlavní rybář
+      const n = Object.values(caught).filter(v => v < r).length + 1;
+      const sy = fisherSpots(n)[0];
+      const tgt = fish.find((f, i) => caught[i] === r);
+      const ty = (tgt && lt > .7 && lt < 3.8) ? (tgt.k.y + sy) / 2 : sy;
+      fishers[0].k.set(150, ty, { tag: "Rybář" });
+    } };
+  };
+
+  SCENES["Souboj 2:2 více míčů otočené branky"] = S => {
+    const T = 24, W = S.W;
+    S.area(80, 30, 140, 120); S.label("Hřiště cca 15 × 12 m", 150, 22);
+    S.goal(96, 90, 180); S.goal(204, 90, 0);
+    S.label("Branka otočená ven", 99, 68); S.label("Branka otočená ven", 201, 68);
+    S.ladder(20, 175, 45); S.label("Koordinační žebřík", 42, 190);
+    S.ladder(235, 175, 45); S.label("Koordinační žebřík", 257, 190);
+    [78, 88].forEach(x => S.hurdle(x, 175)); [212, 222].forEach(x => S.hurdle(x, 175)); S.label("Překážky", 83, 162); S.label("Překážky", 217, 162);
+    const coach = S.kid(S.COL.coach, { cap: true }); S.label("Trenér", 150, 196);
+    const sc = { b: 0, r: 0 }; const score = S.label("Modří 0 : 0 Červení", 150, 8);
+    // modří útočí na pravou branku (střílí do ní zezadu = z pravé strany), červení na levou
+    const B1 = S.track([[0, 10, 175], [1.2, 10, 175], [3, 65, 175, { hop: false }], [3.8, 95, 175, { hop: true }], [4.6, 118, 150], [5.4, 128, 128], [7, 160, 105], [8.2, 196, 70], [9.3, 222, 82], [9.9, 222, 92], [13, 205, 60], [14.5, 150, 95], [16, 140, 110], [18, 170, 75], [21, 110, 60], [24, 10, 175]]);
+    const B2 = S.track([[0, 4, 181], [2, 4, 181], [3.8, 65, 181], [4.6, 95, 181, { hop: true }], [5.4, 112, 158], [6.2, 150, 118], [8, 175, 118], [9.5, 118, 118], [11, 104, 112], [13.5, 175, 100], [15.4, 170, 84], [16.6, 208, 68], [17.6, 223, 84], [18.3, 222, 92], [21, 190, 130], [24, 4, 181]]);
+    const R1 = S.track([[0, 290, 175], [1.2, 290, 175], [3, 235, 175], [3.8, 205, 175, { hop: true }], [4.6, 182, 150], [5.4, 172, 128], [7, 140, 115], [9.5, 105, 132], [10.6, 78, 110], [11.4, 78, 98], [13, 110, 70], [14.5, 145, 85], [16, 185, 72], [18, 205, 78], [21, 190, 60], [24, 290, 175]]);
+    const R2 = S.track([[0, 296, 181], [2, 296, 181], [3.8, 235, 181], [4.6, 205, 181, { hop: true }], [5.4, 188, 158], [6.2, 165, 100], [7.4, 180, 85], [8.4, 205, 72], [9.5, 212, 80], [13, 160, 120], [14.5, 158, 104], [16, 150, 100], [17, 190, 80], [18.3, 212, 96], [21, 230, 120], [24, 296, 181]]);
+    const cT = S.track([[0, 150, 178], [24, 150, 178]]);
+    const K = { B1: S.kid(S.COL.blue), B2: S.kid(S.COL.blue, { hair: "#111" }), R1: S.kid(S.COL.red), R2: S.kid(S.COL.red, { hair: "#c2410c" }) };
+    const TR = { B1, B2, R1, R2 };
+    const balls = [S.ball(), S.ball(), S.ball()];
+    const at = (id, t) => { const p = TR[id](t); return [p.x + (p.x < 150 ? 6 : -6), p.y + 11]; };
+    const C = [150, 178];
+    // míče: seznam úseků
+    const BL = [
+      [[0, 5.2, "hide"], [5.2, 6.2, "pass", C, "B1"], [6.2, 9.9, "own", "B1"], [9.9, 10.4, "shot", "B1", [201, 90]], [10.4, 24, "goal", [201, 90]]],
+      [[0, 5.2, "hide"], [5.2, 6.2, "pass", C, "R1"], [6.2, 11.4, "own", "R1"], [11.4, 11.9, "shot", "R1", [99, 90]], [11.9, 24, "goal", [99, 90]]],
+      [[0, 13, "hide"], [13, 14.4, "pass", C, "B1"], [14.4, 15.9, "own", "B1"], [15.9, 16.6, "pass", "B1", "B2"], [16.6, 18.3, "own", "B2"], [18.3, 18.8, "shot", "B2", [201, 92]], [18.8, 24, "goal", [201, 92]]],
+    ];
+    const res = (p, t) => typeof p === "string" ? at(p, t) : p;
+    return { T, caption: t => t < 1.2 ? "Na pokyn trenéra hráči vybíhají" : t < 5.2 ? "Koordinace přes žebřík a překážky" : t < 12.5 ? "Trenér posílá 1. a 2. míč – dva souboje 1 na 1, branky se musí obejít" : t < 19 ? "Trenér dává 3. míč – dohrává se 2 na 2" : "Návrat na start, další čtveřice",
+    update(t) {
+      coach.set(C[0], C[1] - 6, { moving: false, tag: (t > 5 && t < 5.8) || (t > 12.8 && t < 13.6) ? "Přihrávka!" : (t < 1.2 ? "Pískám!" : null) });
+      for (const id in K) { const p = TR[id](t); K[id].set(p.x, p.y, { hop: p.hop }); }
+      const s = { b: 0, r: 0 };
+      balls.forEach((segs, i) => {}); // placeholder pro čitelnost
+      BL.forEach((segs, i) => {
+        const g = segs.find(s => t >= s[0] && t < s[1]) || segs[segs.length - 1];
+        let p = [0, 0], vis = true;
+        const u = S.ease(S.ramp(t, g[0], g[1]));
+        if (g[2] === "hide") vis = false;
+        else if (g[2] === "own") p = at(g[3], t);
+        else if (g[2] === "pass" || g[2] === "shot") p = S.lerp(res(g[3], g[0]), res(g[4], g[1]), u);
+        else if (g[2] === "goal") { p = g[3]; vis = t < 21.5; if (i === 1) s.r++; else s.b++; }
+        balls[i].set(p[0], p[1], vis);
+      });
+      score.set(`Modří ${s.b} : ${s.r} Červení`, 150, 8);
+      const tags = { B1: t > 14.4 && t < 16 ? "Přihrávka" : null, B2: t > 16.6 && t < 18.8 ? "Obchází branku" : null, R1: t > 9.5 && t < 11.4 ? "Obchází branku" : null };
+      for (const id in tags) if (tags[id]) { const p = TR[id](t); K[id].set(p.x, p.y, { hop: p.hop, tag: tags[id] }); }
+    } };
+  };
+
+  const VB = { "Krádež pokladu": [240, 240] };
+
+  function mount(box, name) {
+    const make = SCENES[name]; if (!make) return null;
+    box.innerHTML = `<svg style="width:100%;height:auto;display:block;border-radius:12px;background:#3a9a52"></svg>
+      <div class="animcap"></div>
+      <div class="animbar"><button type="button" class="btn sm" data-a="play">⏸ Pauza</button><button type="button" class="btn sm" data-a="speed">Rychlost 1×</button><button type="button" class="btn sm" data-a="restart">⟲ Od začátku</button></div>`;
+    const svg = box.querySelector("svg"), cap = box.querySelector(".animcap");
+    const S = stage(svg, VB[name] || [300, 200]);
+    const sc = make(S);
+    let t = 0, last = performance.now(), run = true, speed = 1, raf, dead = false;
+    function frame(now) {
+      if (dead || !svg.isConnected) return;
+      const dt = Math.min(.05, (now - last) / 1000); last = now;
+      if (run) t = (t + dt * speed) % sc.T;
+      S.time = t; sc.update(t); const c = sc.caption?.(t) || ""; if (cap.textContent !== c) cap.textContent = c;
+      raf = requestAnimationFrame(frame);
+    }
+    raf = requestAnimationFrame(frame);
+    box.querySelector('[data-a="play"]').onclick = e => { run = !run; e.target.textContent = run ? "⏸ Pauza" : "▶ Přehrát"; };
+    box.querySelector('[data-a="speed"]').onclick = e => { speed = speed === 1 ? .5 : speed === .5 ? 2 : 1; e.target.textContent = `Rychlost ${speed}×`; };
+    box.querySelector('[data-a="restart"]').onclick = () => { t = 0; };
+    return { stop() { dead = true; cancelAnimationFrame(raf); }, seek(x) { t = x; S.time = x; sc.update(x); cap.textContent = sc.caption?.(x) || ""; }, T: sc.T };
+  }
+  return { mount, has: n => !!SCENES[n], names: () => Object.keys(SCENES) };
+})();
+
+/*/ANIM*/</script>
 <script>
 const SUPABASE_URL = "https://uoryiokkehsolzpguzkf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_TDu2OlylMytb4BmS0sks3w_vklKVRmv";
@@ -153,6 +502,7 @@ const myAges = () => { const p = state.profile; return p?.age_groups?.length ? a
 const ageOk = d => { const m = myAges(); return state.showAllAges || !m.length || !(d.age_groups||[]).length || d.age_groups.some(a => m.includes(a)); };
 const toggleSet = (set, k) => { if(k==="all") set.clear(); else set.has(k) ? set.delete(k) : set.add(k); };
 const catLabel = set => set.size ? [...set].map(k=>CATS[k]).join(", ") : "všechny typy";
+const vpaths = d => (d.video_path||"").split("|").filter(Boolean);
 const ageSort = arr => [...(arr||[])].sort((a,b)=>parseInt(a.slice(1))-parseInt(b.slice(1)));
 const ageRange = arr => { const a = ageSort(arr); return a.length ? (a.length>1 ? a[0]+"–"+a[a.length-1] : a[0]) : ""; };
 
@@ -223,7 +573,7 @@ function drillCard(d){
     <div class="row"><div class="grow"><p class="drill-title">${esc(d.name)}</p>
       <div class="muted">${[d.duration_min?d.duration_min+" min":"", players(d), d.coaches_needed?`${d.coaches_needed} trenér${d.coaches_needed>1?"i":""}`:""].filter(Boolean).map(esc).join(" · ")}</div></div>
       ${isMine(d)?`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}" aria-label="Oblíbené">${d.favorite?"★":"☆"}</button>`:""}</div>
-    <div style="margin-top:6px"><span class="tag">${CATS[d.category]||d.category}</span>${d.age_groups?.length?`<span class="tag">${ageRange(d.age_groups)}</span>`:""}${d.video_url?`<span class="tag">▶ ${LANG[d.video_lang]||"video"}</span>`:""}${d.xps_video&&!d.video_url?`<span class="tag">▶ video v XPS</span>`:""}${d.source?.startsWith("FAČR")?`<span class="tag">FAČR</span>`:""}${d.checked?`<span class="tag">✓ ověřeno</span>`:""}</div></div>`;
+    <div style="margin-top:6px"><span class="tag">${CATS[d.category]||d.category}</span>${d.age_groups?.length?`<span class="tag">${ageRange(d.age_groups)}</span>`:""}${d.video_url?`<span class="tag">▶ ${LANG[d.video_lang]||"video"}</span>`:""}${Anim.has(d.name)?`<span class="tag">🎬 animace</span>`:""}${vpaths(d).length?`<span class="tag">▶ video FAČR</span>`:d.xps_video&&!d.video_url?`<span class="tag">▶ video v XPS</span>`:""}${d.source?.startsWith("FAČR")?`<span class="tag">FAČR</span>`:""}${d.checked?`<span class="tag">✓ ověřeno</span>`:""}</div></div>`;
 }
 function renderDrills(){
   const q = state.q.toLowerCase();
@@ -283,7 +633,9 @@ function showDrill(id){
       ${d.coaches_needed?`<span class="tag">🧑‍🏫 ${d.coaches_needed} trenér${d.coaches_needed>1?"i":""}</span>`:""}
       ${d.area?`<span class="tag">📐 ${esc(d.area)}</span>`:""}</div>
     ${videoBlock(d)}
-    ${d.xps_video && !d.video_url ? `<div class="section"><h3>Video</h3><p>▶ Video je v aplikaci XPS: <b>Sbírky → Příručka FAČR → ${esc(d.name)}</b></p></div>` : ""}
+    ${Anim.has(d.name) ? `<div class="section"><h3>🎬 Animace</h3><div id="anim"></div></div>` : ""}
+    ${vpaths(d).length ? `<div class="section"><h3>Video z Příručky FAČR</h3>${vpaths(d).map(p=>`<video data-vp="${esc(p)}" controls playsinline preload="metadata" style="width:100%;border-radius:10px;background:#000;margin-bottom:6px"></video>`).join("")}<p class="muted" style="margin:0">Soukromá kopie z XPS, přehraje se jen na tvém účtu.</p></div>`
+      : d.xps_video && !d.video_url ? `<div class="section"><h3>Video</h3><p>▶ Video je v aplikaci XPS: <b>Sbírky → Příručka FAČR → ${esc(d.name)}</b></p></div>` : ""}
     ${sec("Průběh",d.description)}${sec("Příprava",d.setup)}${sec("Pomůcky",d.equipment)}
     ${sec("Na co dbát",d.coaching_points)}${sec("Varianty",d.variations)}
     ${d.source?`<p class="muted" style="margin-top:14px">Zdroj: ${esc(d.source)}</p>`:""}
@@ -291,6 +643,12 @@ function showDrill(id){
     <div class="row noprint" style="margin-top:14px"><button class="btn primary" id="edit">${mine?"Upravit":"Upravit jako vlastní kopii"}</button><span class="grow"></span>${mine?`<button class="btn danger" id="del">Smazat</button>`:""}</div>
    </div>`;
   document.getElementById("back").onclick = () => { state.view=null; render(); };
+  const ab = document.getElementById("anim"); if(ab) Anim.mount(ab, d.name);
+  app.querySelectorAll("video[data-vp]").forEach(async v => {
+    const { data, error } = await sb.storage.from("xps-videos").createSignedUrl(v.dataset.vp, 3600);
+    if(error || !data?.signedUrl){ v.replaceWith(Object.assign(document.createElement("p"), { className:"muted", textContent:"Video se nepodařilo načíst (je dostupné jen pro účet, který ho nahrál)." })); return; }
+    v.src = data.signedUrl;
+  });
   document.getElementById("edit").onclick = () => editDrill(mine ? d : { ...d, id:null, user_id:null, name:d.name });
   const fav = app.querySelector("[data-fav]"); if(fav) fav.onclick = async () => { await toggleField(d.id,"favorite"); showDrill(d.id); };
   const chk = document.getElementById("chk"); if(chk) chk.onchange = () => toggleField(d.id,"checked").then(()=>showDrill(d.id));
