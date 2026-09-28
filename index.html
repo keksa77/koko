@@ -177,6 +177,20 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .pnote{width:100%}
 .thumb{width:96px}
 .fab{right:auto;left:18px}
+
+.tl-thumb{width:84px;cursor:zoom-in;margin-right:2px}
+.tl-big{margin:8px 0}
+.totbox{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.totmain{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.totmain b{font-size:28px;color:var(--brand)}
+.totblk{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;font-size:15px;color:var(--muted)}
+.totblk i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+.totblk b{color:var(--ink)}
+
+.pthumb{width:64px}
+.pi > .grow{flex:1 1 calc(100% - 180px)}
+
+.totmain .tplv{white-space:normal}
 </style>
 </head>
 <body>
@@ -1806,15 +1820,20 @@ function showSession(id){
     return `<div class="tl">
       <div class="tl-time"><b>${clock}</b><span>${dur} min</span></div>
       <div class="tl-body">
-        <div class="row" style="align-items:flex-start"><p class="drill-title grow" style="font-size:16px">${i+1}. ${esc(d.name)}</p>
-          ${url?`<a class="vid noprint" href="${esc(url)}" target="_blank" rel="noopener" aria-label="Video">▶ Video</a>`:""}</div>
-        <div class="tl-meta">${CATS[d.category]}${pl?` · <span${kidsWarn?' class="warn"':""}>👥 ${esc(pl)}</span>`:""}${d.coaches_needed?` · <span${coachWarn?' class="warn"':""}>🧑‍🏫 ${d.coaches_needed}</span>`:""}</div>
+        <div class="row" style="align-items:flex-start">${Anim.has(d.name)?`<div class="thumb tl-thumb noprint" data-thumb="${esc(d.name)}" data-big="${i}" title="Zvětšit animaci"></div>`:""}<div class="grow" style="min-width:0"><p class="drill-title" style="font-size:18px">${i+1}. ${esc(d.name)}</p>
+          <div class="tl-meta">${CATS[d.category]}${pl?` · <span${kidsWarn?' class="warn"':""}>👥 ${esc(pl)}</span>`:""}${d.coaches_needed?` · <span${coachWarn?' class="warn"':""}>🧑‍🏫 ${d.coaches_needed}</span>`:""}</div>
+          ${url?`<a class="vid noprint" style="display:inline-block;margin-top:6px" href="${esc(url)}" target="_blank" rel="noopener" aria-label="Video">▶ Video</a>`:""}</div></div>
+        <div class="tl-big noprint" data-bigbox="${i}" hidden></div>
         ${it.note?`<div class="tl-note">📌 ${esc(it.note)}</div>`:""}
         ${d.description?`<p class="tl-desc">${esc(d.description)}</p>`:""}
         ${more?`<details class="tl-more"><summary>Více (příprava, pomůcky, na co dbát)</summary>${more}</details>`:""}
         ${url?`<div class="print-only tl-url">Video: ${esc(url)}</div>`:""}
       </div></div>`; }).join("");
   const end = start!=null ? hhmm(start+t) : null;
+  const blk = {}; items.forEach(it => { const b = blockOf(state.drills.find(x=>x.id===it.drill_id)); const k = b ? b.k : "jine"; blk[k] = (blk[k]||0) + (it.duration_min||0); });
+  const diff = t - TEMPLATE_TOTAL;
+  const totalBox = `<div class="totbox"><div class="totmain"><span>Celkem</span><b>${t} min</b><span class="tplv ${Math.abs(diff)<=5?"ok":diff<0?"under":"over"}">${diff===0?"přesně podle šablony":diff<0?`o ${-diff} min méně než šablona ${TEMPLATE_TOTAL} min`:`o ${diff} min víc než šablona ${TEMPLATE_TOTAL} min`}</span></div>
+    <div class="totblk">${TEMPLATE.map(b=>`<span><i style="background:${b.col}"></i>${b.name} <b>${blk[b.k]||0}</b>/${b.min}</span>`).join("")}${blk.jine?`<span><i style="background:#94a3b8"></i>Ostatní <b>${blk.jine}</b></span>`:""}</div></div>`;
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
   <div class="card" style="padding:12px 14px">
     <h2 style="margin:0;font-size:20px">${esc(s.title)}</h2>
@@ -1825,12 +1844,15 @@ function showSession(id){
       <div><span>🧑‍🏫</span>${s.coaches?`${s.coaches} trenér${s.coaches>1?"i":""}`:"trenéři neuvedeni"}</div>
     </div>
     ${s.note?`<p class="tl-note" style="margin:8px 0 0">${esc(s.note)}</p>`:""}
+    ${totalBox}
   </div>
   <div class="card" style="padding:4px 12px">${rows || `<p class="muted">Trénink zatím nemá žádná cvičení.</p>`}
-    ${end?`<div class="tl tl-end"><div class="tl-time"><b>${end}</b></div><div class="tl-body muted" style="padding-top:2px">Konec tréninku</div></div>`:""}
+    <div class="tl tl-end"><div class="tl-time"><b>${end||""}</b></div><div class="tl-body" style="padding-top:2px"><b>Konec tréninku · celkem ${t} min</b> <span class="muted">(${items.length} cvičení)</span></div></div>
   </div>
   <div class="row noprint" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" id="edit">Upravit</button><button class="btn small" id="expand">Rozbalit vše</button><button class="btn small" id="print">Tisk / PDF</button><button class="btn small" id="dup">Duplikovat</button><span class="grow"></span><button class="btn danger small" id="del">Smazat</button></div>`;
   app.querySelectorAll(".tl-desc").forEach(p => p.onclick = () => p.classList.toggle("open"));
+  mountThumbs(app);
+  app.querySelectorAll("[data-big]").forEach(th => th.onclick = () => { const box = app.querySelector(`[data-bigbox="${th.dataset.big}"]`); if(!box.hidden){ box.hidden = true; box.innerHTML = ""; return; } box.hidden = false; Anim.mount(box, th.dataset.thumb); });
   document.getElementById("back").onclick = () => { state.view=null; render(); };
   document.getElementById("edit").onclick = () => editSession(s);
   const ex = document.getElementById("expand");
@@ -1919,6 +1941,7 @@ function editSession(s={}){
       return `<div class="pi" data-i="${i}">
         <span class="handle" data-h="plan" aria-label="Přesunout">⠿</span>
         <span class="pt"></span>
+        ${d && Anim.has(d.name)?`<div class="thumb pthumb" data-thumb="${esc(d.name)}"></div>`:""}
         <div class="grow" style="min-width:0">
           <div class="pn">${esc(d?.name||"?")}</div>
           <div class="muted" style="font-size:12px">${CATS[d?.category]||""}${d?.xps_video||d?.video_url?" · ▶":""}</div>
@@ -1933,6 +1956,7 @@ function editSession(s={}){
     plan.querySelectorAll("[data-dp]").forEach(b => b.onclick = () => { const it=items[b.dataset.dp]; it.duration_min=Math.min(90,(it.duration_min||0)+1); drawPlan(); });
     plan.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { items.splice(+b.dataset.rm,1); drawPlan(); drawPool(); });
     plan.querySelectorAll("[data-note]").forEach(inp => inp.oninput = () => { items[inp.dataset.note].note = inp.value; });
+    mountThumbs(plan);
     plan.querySelectorAll('[data-h="plan"]').forEach(h => h.onpointerdown = e => startDrag(e, { type:"plan", index:+h.closest(".pi").dataset.i }, h.closest(".pi")));
     totals();
   }
