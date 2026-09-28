@@ -1474,15 +1474,16 @@ const players = d => d.players_min||d.players_max ? `${d.players_min||"?"}–${d
 function renderAuth(mode="login"){
   document.getElementById("tabs").hidden = true; fab.hidden = true; document.getElementById("logoutBtn").hidden = true;
   app.innerHTML = `<div class="center card">
-    <h2 style="margin-top:0">${mode==="login"?"Přihlášení trenéra":"Nový účet"}</h2>
+    <h2 style="margin-top:0">${mode==="login"?"Přihlášení trenéra":"Registrace na pozvánku"}</h2>
+    ${mode==="signup"?`<p class="muted" style="margin-top:0">Účet si může založit jen trenér, kterého někdo pozval. Použij e-mail, na který ti přišla pozvánka.</p>`:""}
     <form id="authForm">
-      <label>E-mail</label><input type="email" id="email" required autocomplete="email">
+      <label>E-mail</label><input type="email" id="email" required autocomplete="email" value="${esc(inviteEmail())}">
       <label>Heslo</label><input type="password" id="pw" required minlength="6" autocomplete="${mode==="login"?"current-password":"new-password"}">
       <div style="margin-top:16px" class="row"><button class="btn primary grow" type="submit">${mode==="login"?"Přihlásit":"Vytvořit účet"}</button></div>
     </form>
     <div style="border-top:1px solid var(--line);margin-top:18px;padding-top:14px;text-align:center">
-      <p style="margin:0 0 8px;font-size:15px">${mode==="login"?"Ještě nemáš účet?":"Už máš účet?"}</p>
-      <button type="button" class="btn" id="swap" style="width:100%;border:2px solid var(--brand);background:transparent;color:var(--brand)">${mode==="login"?"Zaregistrovat se":"Přihlásit se"}</button>
+      <p style="margin:0 0 8px;font-size:15px">${mode==="login"?"Máš pozvánku a ještě nemáš účet?":"Už máš účet?"}</p>
+      <button type="button" class="btn" id="swap" style="width:100%;border:2px solid var(--brand);background:transparent;color:var(--brand)">${mode==="login"?"Zaregistrovat se s pozvánkou":"Přihlásit se"}</button>
     </div>
   </div>`;
   document.getElementById("swap").onclick = e => { e.preventDefault(); renderAuth(mode==="login"?"signup":"login"); };
@@ -1499,9 +1500,13 @@ function renderAuth(mode="login"){
         if(!data.session){ app.innerHTML = `<div class="center card"><h2 style="margin-top:0">Zkontroluj e-mail</h2><p>Poslali jsme ti potvrzovací odkaz na <b>${esc(email)}</b>. Po potvrzení se tady přihlas.</p><button class="btn primary" id="toLogin">Na přihlášení</button></div>`;
           document.getElementById("toLogin").onclick = () => renderAuth("login"); }
       }
-    }catch(err){ fail(err); } finally { btn.disabled = false; }
+    }catch(err){
+      if(mode!=="login" && /INVITE_REQUIRED|Database error saving new user|pozvánk/i.test(err?.message||"")) toast("Tento e-mail nemá pozvánku. Požádej trenéra, ať tě pozve – pak se zaregistruj stejným e-mailem.");
+      else fail(err);
+    } finally { btn.disabled = false; }
   };
 }
+function inviteEmail(){ try{ return new URLSearchParams(location.search).get("invite") || ""; }catch(_){ return ""; } }
 
 /* ---------- DATA ---------- */
 async function loadDrills(){
@@ -2038,7 +2043,14 @@ function renderSettings(first=false){
     ${first?`<button class="btn primary" id="goOn" style="margin-top:14px;width:100%" ${cur.size?"":"disabled"}>Pokračovat</button>`:""}
     <p class="muted" style="margin-top:12px">V seznamu cvičení i v zásobníku to lze kdykoli dočasně změnit rozbalovacím filtrem „Kategorie“.</p>
     ${first?"":`<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:12px" class="muted">Přihlášen: ${esc(state.user.email)}</div>`}
-  </div>`;
+  </div>
+  ${!first && state.isAdmin ? `<div class="card" id="invCard"><h2 style="margin-top:0">Pozvánky trenérů</h2>
+    <p class="muted" style="margin-top:0">Registrace je jen na pozvánku. Zadej e-mail trenéra – pak mu pošli odkaz (otevře se ti e-mail s připraveným textem).</p>
+    <form id="invf" autocomplete="off"><label>E-mail trenéra</label><input type="email" name="email" required placeholder="trener@example.cz">
+    <label>Poznámka (nepovinné)</label><input type="text" name="note" placeholder="např. U8, Zbrojovka">
+    <button class="btn primary bigadd" type="submit">Pozvat</button></form>
+    <div id="invList" class="muted">Načítám…</div></div>` : ""}`;
+  if(!first && state.isAdmin) loadInvites();
   app.querySelectorAll("[data-age]").forEach(b => b.onclick = async () => {
     const set = new Set(myAges()); toggleSet(set, b.dataset.age);
     const age_groups = ageSort([...set]);
@@ -2051,11 +2063,35 @@ function renderSettings(first=false){
   const go = document.getElementById("goOn"); if(go) go.onclick = () => { state.tab = "drills"; render(); };
 
 }
+function inviteLink(email){ return location.origin + location.pathname + "?invite=" + encodeURIComponent(email); }
+function inviteMail(email){
+  const body = `Ahoj,\n\nzvu tě do aplikace Trenér – databáze cvičení a plánovač tréninků pro přípravky.\n\nZaregistruj se tímto e-mailem (${email}) zde:\n${inviteLink(email)}\n\nPo registraci ti přijde potvrzovací e-mail.\n\n${state.user.email}`;
+  location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Pozvánka do aplikace Trenér")}&body=${encodeURIComponent(body)}`;
+}
+async function loadInvites(){
+  const box = document.getElementById("invList"); if(!box) return;
+  const { data, error } = await sb.from("invites").select("*").order("created_at", { ascending:false });
+  if(error){ box.textContent = "Pozvánky se nepodařilo načíst."; return; }
+  box.innerHTML = (data||[]).map(x => `<div class="row" style="border-top:1px solid var(--line);padding:10px 0;gap:8px;flex-wrap:wrap">
+      <div class="grow" style="color:var(--ink);flex-basis:100%"><b style="word-break:break-all">${esc(x.email)}</b>${x.note?` <span class="muted">· ${esc(x.note)}</span>`:""}<br>
+      ${x.used_at?`<span class="tplv ok">✓ zaregistrován</span>`:`<span class="tplv under">⏳ čeká na registraci</span>`}</div>
+      ${x.used_at?"":`<button type="button" class="btn small" data-imail="${esc(x.email)}">Poslat znovu</button><button type="button" class="btn small danger" data-idel="${esc(x.email)}">Zrušit</button>`}</div>`).join("") || "Zatím žádné pozvánky.";
+  box.querySelectorAll("[data-imail]").forEach(b => b.onclick = () => inviteMail(b.dataset.imail));
+  box.querySelectorAll("[data-idel]").forEach(b => b.onclick = async () => { if(!confirm(`Zrušit pozvánku pro ${b.dataset.idel}?`)) return; const { error } = await sb.from("invites").delete().eq("email", b.dataset.idel); if(error) return fail(error); loadInvites(); });
+  const f = document.getElementById("invf");
+  if(f && !f.dataset.b){ f.dataset.b = 1; f.onsubmit = async e => {
+    e.preventDefault(); const fd = new FormData(f), email = String(fd.get("email")||"").trim().toLowerCase();
+    const { error } = await sb.from("invites").insert({ email, note: String(fd.get("note")||"").trim() || null });
+    if(error){ if(/duplicate|unique/i.test(error.message)) toast("Tento e-mail už pozvánku má"); else return fail(error); }
+    else toast("Pozvánka uložena – pošli ji e-mailem");
+    f.reset(); await loadInvites(); inviteMail(email);
+  }; }
+}
 function setTitle(){ const m = myAges(); document.getElementById("title").textContent = "⚽ Trenér" + (m.length ? " " + (m.length>2 ? ageRange(m) : m.join("+")) : ""); }
 
 /* ---------- SHELL ---------- */
 function render(){
-  if(!state.user) return renderAuth();
+  if(!state.user) return renderAuth(inviteEmail() ? "signup" : "login");
   document.getElementById("tabs").hidden = false; document.getElementById("logoutBtn").hidden = false;
   setTitle();
   if(state.profile && !state.ages) state.ages = new Set(myAges());
@@ -2081,7 +2117,7 @@ sb.auth.onAuthStateChange((_ev, session) => {
   if(loadedFor === u.id) return;
   loadedFor = u.id;
   setTimeout(async () => {
-    try{ await Promise.all([loadDrills(), loadSessions(), loadProfile()]); }catch(e){ fail(e); }
+    try{ await Promise.all([loadDrills(), loadSessions(), loadProfile(), sb.rpc("is_admin").then(r => { state.isAdmin = !!r.data; })]); }catch(e){ fail(e); }
     render();
   }, 0);
 });
