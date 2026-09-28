@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1f7a3f">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Trenér U7</title>
+<title>KoKo – kouč kopané</title>
+<meta name="application-name" content="KoKo">
+<meta name="apple-mobile-web-app-title" content="KoKo">
+<meta name="description" content="KoKo – kouč kopané: databáze cvičení a plánovač tréninků pro fotbalové přípravky">
 <style>
 :root{
   --bg:#f4f6f3; --card:#ffffff; --ink:#1b2420; --muted:#48534d; --line:#dfe5e1;
@@ -21,7 +24,9 @@
 html,body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 button,input,select,textarea{font:inherit;color:inherit}
 header{position:sticky;top:0;z-index:5;background:var(--brand);color:var(--brand-ink);padding:12px 16px calc(10px);display:flex;align-items:center;gap:10px}
-header h1{font-size:20px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header h1{font-size:20px;margin:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:baseline;gap:10px;min-width:0}
+header h1 .brand{font-size:24px;font-weight:800;letter-spacing:.02em}
+header h1 .sub{font-size:15px;font-weight:500;opacity:.9;overflow:hidden;text-overflow:ellipsis}
 header button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:4px 10px;font-size:16px}
 nav.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:50px;z-index:4}
 nav.tabs button{flex:1;border:0;background:none;padding:12px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent}
@@ -195,7 +200,7 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 </head>
 <body>
 <header>
-  <h1 id="title">⚽ Trenér</h1>
+  <h1 id="title"><span class="brand">⚽ KoKo</span><span class="sub">kouč kopané</span></h1>
   <button id="logoutBtn" hidden>Odhlásit</button>
 </header>
 <nav class="tabs" id="tabs" hidden>
@@ -1488,6 +1493,7 @@ const players = d => d.players_min||d.players_max ? `${d.players_min||"?"}–${d
 function renderAuth(mode="login"){
   document.getElementById("tabs").hidden = true; fab.hidden = true; document.getElementById("logoutBtn").hidden = true;
   app.innerHTML = `<div class="center card">
+    <div style="text-align:center;margin-bottom:10px"><div style="font-size:40px;font-weight:800;color:var(--brand);line-height:1.1">⚽ KoKo</div><div class="muted" style="font-size:18px">kouč kopané</div></div>
     <h2 style="margin-top:0">${mode==="login"?"Přihlášení trenéra":"Registrace na pozvánku"}</h2>
     ${mode==="signup"?`<p class="muted" style="margin-top:0">Účet si může založit jen trenér, kterého někdo pozval. Použij e-mail, na který ti přišla pozvánka.</p>`:""}
     <form id="authForm">
@@ -2059,8 +2065,8 @@ function renderSettings(first=false){
   const cur = new Set(myAges());
   app.innerHTML = `<div class="card">
     <h2 style="margin-top:0">${first?"Vítej! Pro jaké kategorie trénuješ?":"Nastavení"}</h2>
-    <p class="muted" style="margin-top:0">Vyber jednu nebo více kategorií. Zásobník cvičení i výběr při skládání tréninku se podle nich automaticky vyfiltruje.</p>
-    <label>Moje kategorie</label>
+    <p class="muted" style="margin-top:0">Vyber věkové kategorie, které tě zajímají (může jich být víc). Podle nich se po otevření aplikace automaticky nastaví filtr „Kat.“ v seznamu cvičení i v zásobníku při skládání tréninku.</p>
+    <label>Filtr věkových kategorií</label>
     <div class="agepick">${AGES.map(a=>`<button type="button" class="chip ${cur.has(a)?"on":""}" aria-pressed="${cur.has(a)}" data-age="${a}">${a}</button>`).join("")}</div>
     <div class="selinfo" style="margin-top:8px">${cur.size ? "Vybráno: " + ageSort([...cur]).join(", ") : '<span class="muted">Zatím nic nevybráno.</span>'}</div>
     <div class="muted">${ageSort([...cur]).map(a=>`${a} – ${AGE_INFO[a]}`).join("<br>")}</div>
@@ -2089,8 +2095,8 @@ function renderSettings(first=false){
 }
 function inviteLink(email){ return location.origin + location.pathname + "?invite=" + encodeURIComponent(email); }
 function inviteMail(email){
-  const body = `Ahoj,\n\nzvu tě do aplikace Trenér – databáze cvičení a plánovač tréninků pro přípravky.\n\nZaregistruj se tímto e-mailem (${email}) zde:\n${inviteLink(email)}\n\nPo registraci ti přijde potvrzovací e-mail.\n\n${state.user.email}`;
-  location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Pozvánka do aplikace Trenér")}&body=${encodeURIComponent(body)}`;
+  const body = `Ahoj,\n\nzvu tě do aplikace KoKo – kouč kopané: databáze cvičení a plánovač tréninků pro přípravky.\n\nZaregistruj se tímto e-mailem (${email}) zde:\n${inviteLink(email)}\n\nPo registraci ti přijde potvrzovací e-mail.\n\n${state.user.email}`;
+  location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Pozvánka do aplikace KoKo – kouč kopané")}&body=${encodeURIComponent(body)}`;
 }
 async function loadInvites(){
   const box = document.getElementById("invList"); if(!box) return;
@@ -2111,7 +2117,7 @@ async function loadInvites(){
     f.reset(); await loadInvites(); inviteMail(email);
   }; }
 }
-function setTitle(){ const m = myAges(); document.getElementById("title").textContent = "⚽ Trenér" + (m.length ? " " + (m.length>2 ? ageRange(m) : m.join("+")) : ""); }
+function setTitle(){ const m = myAges(); document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané${m.length ? " · " + esc(m.length>2 ? ageRange(m) : m.join("+")) : ""}</span>`; }
 
 /* ---------- SHELL ---------- */
 function render(){
