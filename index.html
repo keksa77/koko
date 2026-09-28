@@ -30,6 +30,7 @@ header h1 .sub{font-size:15px;font-weight:500;opacity:.9;overflow:hidden;text-ov
 header button{background:transparent;border:1px solid currentColor;color:inherit;border-radius:8px;padding:4px 10px;font-size:16px}
 nav.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:50px;z-index:4}
 nav.tabs button{flex:1;border:0;background:none;padding:12px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent}
+nav.tabs button.tab2{line-height:1.1;padding:6px 8px;font-size:.92em}
 nav.tabs button.on{color:var(--brand);border-bottom-color:var(--brand)}
 main{max-width:760px;margin:0 auto;padding:16px 16px 96px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow);margin-bottom:10px}
@@ -185,6 +186,33 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 
 .tl-thumb{width:84px;cursor:zoom-in;margin-right:2px}
 .tl-big{margin:8px 0}
+.sumline{margin-top:4px;font-size:16px;color:var(--muted)}
+.sumline b{color:var(--brand)}
+.tl2{padding:12px 0;border-top:1px solid var(--line)}
+.tl2:first-child{border-top:0}
+.tl2-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.tl2-head .drill-title{margin:0;font-size:18px;min-width:0}
+.tl2-no{flex:none;width:26px;height:26px;border-radius:50%;color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center}
+.tl2-time{flex:none;display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
+.tl2-time b{font-size:16px;color:var(--brand)}
+.tl2-time span{font-size:14px;color:var(--muted)}
+.tl2-anim{border-radius:12px;overflow:hidden;background:#3a9a52;aspect-ratio:3/2;cursor:pointer}
+.vidlink{color:var(--brand);font-weight:700;text-decoration:none}
+.tl-endline{padding:10px 0;border-top:1px solid var(--line);font-weight:700;font-size:16px}
+.totd{margin-top:8px}
+.hidnote{margin:6px 0 0;padding:6px 10px;border-radius:8px;background:#fde2e2;color:#b42318;font-weight:600;font-size:15px}
+.totd summary{list-style:none;cursor:pointer}
+.totd summary::-webkit-details-marker{display:none}
+.totbar{position:relative;display:flex;height:10px;border-radius:5px;background:var(--line);overflow:visible}
+.totbar i{display:block;height:100%;border-right:1px solid var(--card)}
+.totbar i:first-child{border-radius:5px 0 0 5px}
+.totbar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);margin-left:-1px}
+.totline{display:flex;align-items:baseline;gap:8px;margin-top:6px;font-size:15px}
+.totline b{font-size:18px;color:var(--ink)}
+.totline .tplv{font-size:14px;padding:1px 6px}
+.totmore{color:var(--brand);font-weight:600;font-size:14px;white-space:nowrap}
+.totd[open] .totmore{visibility:hidden}
+@media print{.tl2-anim,.tl-big{display:none}}
 .totbox{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
 .totmain{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .totmain b{font-size:28px;color:var(--brand)}
@@ -206,7 +234,7 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 <nav class="tabs" id="tabs" hidden>
   <button data-tab="drills" class="on">Cvičení</button>
   <button data-tab="sessions">Tréninky</button>
-  <button data-tab="add">＋ Přidat</button>
+  <button data-tab="add" class="tab2">＋ Přidat<br>cvičení</button>
   <button data-tab="settings" style="flex:0 0 auto;padding:12px 16px" aria-label="Nastavení">⚙</button>
 </nav>
 <main id="app"><p class="muted">Načítám…</p></main>
@@ -569,7 +597,7 @@ const Anim = (() => {
       <div class="animbar"><button type="button" class="btn sm" data-a="play">⏸ Pauza</button><button type="button" class="btn sm" data-a="speed">Rychlost 1×</button><button type="button" class="btn sm" data-a="restart">⟲ Od začátku</button></div>`;
     const svg = box.querySelector("svg"), cap = box.querySelector(".animcap");
     const S = stage(svg, VB[name] || [300, 200]);
-    if (mini) S.L.labels.setAttribute("display", "none");
+    if (mini && !opt.labels) S.L.labels.setAttribute("display", "none");
     const sc = make(S);
     let t = mini ? (name.length * 1.37) % sc.T : 0, last = performance.now(), run = true, speed = 1, raf = 0, dead = false, visible = !mini;
     function frame(now) {
@@ -1459,7 +1487,7 @@ function mountThumbs(root){
   thumbIO && thumbIO.disconnect();
   const els = root.querySelectorAll("[data-thumb]");
   if(!("IntersectionObserver" in window)){ els.forEach(el => Anim.mount(el, el.dataset.thumb, { mini:true })); return; }
-  thumbIO = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting && !e.target.dataset.m){ e.target.dataset.m = 1; Anim.mount(e.target, e.target.dataset.thumb, { mini:true }); } }), { rootMargin:"200px" });
+  thumbIO = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting && !e.target.dataset.m){ e.target.dataset.m = 1; Anim.mount(e.target, e.target.dataset.thumb, { mini:true, labels:"lbl" in e.target.dataset }); } }), { rootMargin:"200px" });
   els.forEach(el => thumbIO.observe(el));
 }
 const toggleSet = (set, k) => { if(k==="all") set.clear(); else set.has(k) ? set.delete(k) : set.add(k); };
@@ -1480,7 +1508,7 @@ const ageRange = arr => { const a = ageSort(arr); return a.length ? (a.length>1 
 
 
 
-const state = { user:null, profile:null, showAllAges:false, ages:null, openDD:null, ddRerender:null, tab:"drills", drills:[], sessions:[], cats:new Set(), q:"", onlyFav:false, onlyCz:false, view:null };
+const state = { user:null, profile:null, showAllAges:false, ages:null, openDD:null, ddRerender:null, tab:"drills", drills:[], sessions:[], cats:new Set(), q:"", mark:"", onlyCz:false, view:null };
 const app = document.getElementById("app");
 const fab = document.getElementById("fab");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1532,6 +1560,9 @@ function inviteEmail(){ try{ return new URLSearchParams(location.search).get("in
 async function loadDrills(){
   const { data, error } = await sb.from("drills").select("*").order("category").order("name");
   if(error) throw error; state.drills = data;
+  const mk = await sb.from("drill_marks").select("drill_id,favorite,hidden");
+  const M = new Map((mk.data||[]).map(m=>[m.drill_id,m]));
+  state.drills.forEach(d => { const m = M.get(d.id); d.favorite = !!m?.favorite; d.hidden = !!m?.hidden; });
   registerDbAnims();
 }
 function registerDbAnims(){
@@ -1597,7 +1628,7 @@ function drillCard(d){
   return `<div class="card" data-open="${d.id}" style="cursor:pointer">
     <div class="row" style="align-items:flex-start">${Anim.has(d.name)?`<div class="thumb" data-thumb="${esc(d.name)}"></div>`:""}<div class="grow"><p class="drill-title">${esc(d.name)}</p>
       <div class="muted">${[d.duration_min?d.duration_min+" min":"", players(d), d.coaches_needed?`${d.coaches_needed} trenér${d.coaches_needed>1?"i":""}`:""].filter(Boolean).map(esc).join(" · ")}</div></div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">${isMine(d)?`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}" aria-label="Oblíbené">${d.favorite?"★":"☆"}</button>`:""}<button class="plusbtn" data-addto="${d.id}" aria-label="Přidat do tréninku" title="Přidat do tréninku">+</button></div></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">${d.hidden?`<button class="star" data-unhide="${d.id}" aria-label="Vrátit do nabídky" title="Vrátit do nabídky">↩</button>`:`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}" aria-label="Oblíbené">${d.favorite?"★":"☆"}</button>`}<button class="plusbtn" data-addto="${d.id}" aria-label="Přidat do tréninku" title="Přidat do tréninku">+</button></div></div>
     <div style="margin-top:6px"><span class="tag">${CATS[d.category]||d.category}</span>${d.age_groups?.length?`<span class="tag">${ageRange(d.age_groups)}</span>`:""}${d.video_url?`<span class="tag">▶ ${LANG[d.video_lang]||"video"}</span>`:""}${Anim.has(d.name)?`<span class="tag">🎬 animace</span>`:""}${vpaths(d).length?`<span class="tag">▶ video FAČR</span>`:d.xps_video&&!d.video_url?`<span class="tag">▶ video v XPS</span>`:""}${d.source?.startsWith("FAČR")?`<span class="tag">FAČR</span>`:""}${d.shared&&d.added_by?`<span class="tag">👥 přidal ${esc(d.added_by.split("@")[0])}</span>`:""}${d.checked?`<span class="tag">✓ ověřeno</span>`:""}</div></div>`;
 }
 function renderDrills(){
@@ -1605,7 +1636,7 @@ function renderDrills(){
   const base = state.drills.filter(ageOk);
   const byType = state.drills.filter(d => !state.cats.size || state.cats.has(d.category));
   const list = base.filter(d =>
-    (!state.cats.size || state.cats.has(d.category)) && (!state.onlyFav || d.favorite) &&
+    (!state.cats.size || state.cats.has(d.category)) && (state.mark==="hidden" ? d.hidden : !d.hidden && (state.mark!=="fav" || d.favorite)) &&
     (!state.onlyCz || d.video_lang==="cs" || d.video_lang==="sk") &&
     (!q || [d.name,d.description,d.equipment,d.coaching_points,d.video_title].join(" ").toLowerCase().includes(q)));
   app.innerHTML = `
@@ -1615,7 +1646,8 @@ function renderDrills(){
       ${ddHtml("cat", "Typ", Object.entries(CATS).filter(([k])=>state.drills.some(d=>d.category===k)).map(([k,v])=>[k, v, base.filter(d=>d.category===k).length]), state.cats)}
     </div>
     <div class="chips" style="padding-top:0">
-      <button class="chip ${state.onlyFav?"on":""}" data-favf="1">★ Oblíbené</button>
+      <button class="chip ${state.mark==="fav"?"on":""}" data-mk="fav">★ Oblíbené <b>${base.filter(d=>d.favorite&&!d.hidden).length}</b></button>
+      <button class="chip ${state.mark==="hidden"?"on":""}" data-mk="hidden">🚫 Vyřazené <b>${base.filter(d=>d.hidden).length}</b></button>
       <button class="chip ${state.onlyCz?"on":""}" data-cz="1">🇨🇿🇸🇰 Video CZ/SK</button>
     </div>
     <p class="muted" style="margin:0 0 8px">${list.length} cvičení</p>
@@ -1624,11 +1656,20 @@ function renderDrills(){
   mountThumbs(app);
   const qi = document.getElementById("q");
   qi.oninput = () => { state.q = qi.value; const pos = qi.selectionStart; renderDrills(); const n=document.getElementById("q"); n.focus(); n.setSelectionRange(pos,pos); };
-  app.querySelector("[data-favf]").onclick = () => { state.onlyFav = !state.onlyFav; renderDrills(); };
+  app.querySelectorAll("[data-mk]").forEach(b => b.onclick = () => { state.mark = state.mark===b.dataset.mk ? "" : b.dataset.mk; renderDrills(); });
+  app.querySelectorAll("[data-unhide]").forEach(b => b.onclick = e => { e.stopPropagation(); setMark(b.dataset.unhide, "hidden", false); });
   app.querySelector("[data-cz]").onclick = () => { state.onlyCz = !state.onlyCz; renderDrills(); };
-  app.querySelectorAll("[data-open]").forEach(c => c.onclick = e => { if(e.target.closest("[data-fav],[data-addto]")) return; showDrill(c.dataset.open); });
+  app.querySelectorAll("[data-open]").forEach(c => c.onclick = e => { if(e.target.closest("[data-fav],[data-addto],[data-unhide]")) return; showDrill(c.dataset.open); });
   app.querySelectorAll("[data-addto]").forEach(b => b.onclick = e => { e.stopPropagation(); pickSession(b.dataset.addto); });
-  app.querySelectorAll("[data-fav]").forEach(b => b.onclick = () => toggleField(b.dataset.fav, "favorite"));
+  app.querySelectorAll("[data-fav]").forEach(b => b.onclick = e => { e.stopPropagation(); const d = state.drills.find(x=>x.id===b.dataset.fav); setMark(d.id, "favorite", !d.favorite); });
+}
+async function setMark(id, field, val, rerender = render){
+  const d = state.drills.find(x=>x.id===id); if(!d) return; const old = d[field]; d[field] = val;
+  if(field==="hidden" && val) d.favorite = false;
+  rerender();
+  const { error } = await sb.from("drill_marks").upsert({ user_id:state.user.id, drill_id:id, favorite:d.favorite, hidden:d.hidden, updated_at:new Date().toISOString() }, { onConflict:"user_id,drill_id" });
+  if(error){ d[field] = old; rerender(); return fail(error); }
+  if(field==="hidden") toast(val ? "Cvičení vyřazeno z nabídky (najdeš ho ve filtru 🚫 Vyřazené)" : "Cvičení vráceno do nabídky");
 }
 async function toggleField(id, field){
   const d = state.drills.find(x=>x.id===id); d[field] = !d[field]; render();
@@ -1651,13 +1692,15 @@ function showDrill(id){
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
    <div class="card">
     <div class="row"><h2 class="grow" style="margin:0">${esc(d.name)}</h2>
-      ${mine?`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}">${d.favorite?"★":"☆"}</button>`:""}</div>
+      ${d.hidden?"":`<button class="star ${d.favorite?"on":""}" data-fav="${d.id}" aria-label="Oblíbené">${d.favorite?"★":"☆"}</button>`}</div>
+    ${d.hidden?`<p class="hidnote">🚫 Toto cvičení máš vyřazené z nabídky.</p>`:""}
     <div style="margin:8px 0"><span class="tag">${CATS[d.category]||d.category}</span>${d.age_groups?.length?`<span class="tag">🎯 ${ageRange(d.age_groups)}</span>`:""}
       ${d.duration_min?`<span class="tag">⏱ ${d.duration_min} min</span>`:""}
       ${players(d)?`<span class="tag">👥 ${esc(players(d))}</span>`:""}
       ${d.coaches_needed?`<span class="tag">🧑‍🏫 ${d.coaches_needed} trenér${d.coaches_needed>1?"i":""}</span>`:""}
       ${d.area?`<span class="tag">📐 ${esc(d.area)}</span>`:""}</div>
     <button class="btn primary bigadd noprint" id="addToSession">＋ Přidat do tréninku</button>
+    <button class="btn small noprint" id="hideBtn" style="margin-top:8px">${d.hidden?"↩ Vrátit do nabídky":"🚫 Vyřadit z nabídky"}</button>
     ${videoBlock(d)}
     ${Anim.has(d.name) ? `<div class="section"><h3>🎬 Animace</h3><div id="anim"></div></div>` : ""}
     ${vpaths(d).length ? `<div class="section"><h3>Video z Příručky FAČR</h3>${vpaths(d).map(p=>`<video data-vp="${esc(p)}" controls playsinline preload="metadata" style="width:100%;border-radius:10px;background:#000;margin-bottom:6px"></video>`).join("")}<p class="muted" style="margin:0">Soukromá kopie z XPS, přehraje se jen na tvém účtu.</p></div>`
@@ -1678,7 +1721,8 @@ function showDrill(id){
     v.src = data.signedUrl;
   });
   document.getElementById("edit").onclick = () => editDrill(mine ? d : { ...d, id:null, user_id:null, name:d.name });
-  const fav = app.querySelector("[data-fav]"); if(fav) fav.onclick = async () => { await toggleField(d.id,"favorite"); showDrill(d.id); };
+  const fav = app.querySelector("[data-fav]"); if(fav) fav.onclick = () => setMark(d.id, "favorite", !d.favorite, () => showDrill(d.id));
+  document.getElementById("hideBtn").onclick = () => setMark(d.id, "hidden", !d.hidden, () => showDrill(d.id));
   const chk = document.getElementById("chk"); if(chk) chk.onchange = () => toggleField(d.id,"checked").then(()=>showDrill(d.id));
   const del = document.getElementById("del"); if(del) del.onclick = async () => {
     if(!confirm(`Opravdu smazat cvičení „${d.name}“? Zmizí i z tréninků, kde je použité.`)) return;
@@ -1823,42 +1867,39 @@ function showSession(id){
       d.coaching_points && `<p><b>Na co dbát:</b> ${esc(d.coaching_points)}</p>`,
       d.variations && `<p><b>Varianty:</b> ${esc(d.variations)}</p>`
     ].filter(Boolean).join("");
-    return `<div class="tl">
-      <div class="tl-time"><b>${clock}</b><span>${dur} min</span></div>
-      <div class="tl-body">
-        <div class="row" style="align-items:flex-start">${Anim.has(d.name)?`<div class="thumb tl-thumb noprint" data-thumb="${esc(d.name)}" data-big="${i}" title="Zvětšit animaci"></div>`:""}<div class="grow" style="min-width:0"><p class="drill-title" style="font-size:18px">${i+1}. ${esc(d.name)}</p>
-          <div class="tl-meta">${CATS[d.category]}${pl?` · <span${kidsWarn?' class="warn"':""}>👥 ${esc(pl)}</span>`:""}${d.coaches_needed?` · <span${coachWarn?' class="warn"':""}>🧑‍🏫 ${d.coaches_needed}</span>`:""}</div>
-          ${url?`<a class="vid noprint" style="display:inline-block;margin-top:6px" href="${esc(url)}" target="_blank" rel="noopener" aria-label="Video">▶ Video</a>`:""}</div></div>
-        <div class="tl-big noprint" data-bigbox="${i}" hidden></div>
-        ${it.note?`<div class="tl-note">📌 ${esc(it.note)}</div>`:""}
-        ${d.description?`<p class="tl-desc">${esc(d.description)}</p>`:""}
-        ${more?`<details class="tl-more"><summary>Více (příprava, pomůcky, na co dbát)</summary>${more}</details>`:""}
-        ${url?`<div class="print-only tl-url">Video: ${esc(url)}</div>`:""}
-      </div></div>`; }).join("");
+    const bk = blockOf(d);
+    return `<div class="tl2">
+      <div class="tl2-head"><span class="tl2-no" style="background:${bk?bk.col:"#94a3b8"}">${i+1}</span><p class="drill-title grow">${esc(d.name)}</p><span class="tl2-time"><b>${clock}</b><span>${dur}′</span></span></div>
+      ${Anim.has(d.name)?`<div class="tl2-anim noprint" data-thumb="${esc(d.name)}" data-lbl data-big="${i}" title="Klepnutím ovládání animace"></div><div class="tl-big noprint" data-bigbox="${i}" hidden></div>`:""}
+      <div class="tl-meta">${CATS[d.category]}${pl?` · <span${kidsWarn?' class="warn"':""}>👥 ${esc(pl)}</span>`:""}${d.coaches_needed?` · <span${coachWarn?' class="warn"':""}>🧑‍🏫 ${d.coaches_needed}</span>`:""}${url?` · <a class="vidlink noprint" style="white-space:nowrap" href="${esc(url)}" target="_blank" rel="noopener">▶ Video</a>`:""}</div>
+      ${it.note?`<div class="tl-note">📌 ${esc(it.note)}</div>`:""}
+      ${d.description?`<p class="tl-desc">${esc(d.description)}</p>`:""}
+      ${more?`<details class="tl-more"><summary>Více (příprava, pomůcky, na co dbát)</summary>${more}</details>`:""}
+      ${url?`<div class="print-only tl-url">Video: ${esc(url)}</div>`:""}
+    </div>`; }).join("");
   const end = start!=null ? hhmm(start+t) : null;
   const blk = {}; items.forEach(it => { const b = blockOf(state.drills.find(x=>x.id===it.drill_id)); const k = b ? b.k : "jine"; blk[k] = (blk[k]||0) + (it.duration_min||0); });
-  const diff = t - TEMPLATE_TOTAL;
-  const totalBox = `<div class="totbox"><div class="totmain"><span>Celkem</span><b>${t} min</b><span class="tplv ${Math.abs(diff)<=5?"ok":diff<0?"under":"over"}">${diff===0?"přesně podle šablony":diff<0?`o ${-diff} min méně než šablona ${TEMPLATE_TOTAL} min`:`o ${diff} min víc než šablona ${TEMPLATE_TOTAL} min`}</span></div>
-    <div class="totblk">${TEMPLATE.map(b=>`<span><i style="background:${b.col}"></i>${b.name} <b>${blk[b.k]||0}</b>/${b.min}</span>`).join("")}${blk.jine?`<span><i style="background:#94a3b8"></i>Ostatní <b>${blk.jine}</b></span>`:""}</div></div>`;
+  const diff = t - TEMPLATE_TOTAL, scale = Math.max(t, TEMPLATE_TOTAL) || 1;
+  const segs = items.map(it => { const d = state.drills.find(x=>x.id===it.drill_id); const b = blockOf(d); return `<i style="width:${(it.duration_min||0)/scale*100}%;background:${b?b.col:"#94a3b8"}"></i>`; }).join("");
+  const dcls = Math.abs(diff)<=5 ? "ok" : diff<0 ? "under" : "over";
+  const totalBox = `<details class="totd"><summary>
+      <div class="totbar">${segs}<u style="left:${TEMPLATE_TOTAL/scale*100}%"></u></div>
+      <div class="totline"><b>${t} min</b><span class="muted">z ${TEMPLATE_TOTAL}</span>${diff?`<span class="tplv ${dcls}">${diff>0?"+":"−"}${Math.abs(diff)}</span>`:`<span class="tplv ok">✓</span>`}<span class="grow"></span><span class="totmore">rozpis ▾</span></div></summary>
+    <div class="totblk">${TEMPLATE.map(b=>`<span><i style="background:${b.col}"></i>${b.name} <b>${blk[b.k]||0}</b>/${b.min}</span>`).join("")}${blk.jine?`<span><i style="background:#94a3b8"></i>Ostatní <b>${blk.jine}</b></span>`:""}</div></details>`;
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
   <div class="card" style="padding:12px 14px">
     <h2 style="margin:0;font-size:20px">${esc(s.title)}</h2>
-    <div class="sumgrid">
-      <div style="grid-column:1/-1;font-size:17px;font-weight:700;color:var(--brand)"><span>📅</span>${new Date(s.date+"T00:00").toLocaleDateString("cs-CZ",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
-      <div style="white-space:nowrap"><span>⏱</span>${start!=null?`${hhmm(start)}–${end} · `:""}<b>${t} min</b></div>
-      <div><span>👥</span>${kids?`${kids} dětí`:"děti neuvedeny"}</div>
-      <div><span>🧑‍🏫</span>${s.coaches?`${s.coaches} trenér${s.coaches>1?"i":""}`:"trenéři neuvedeni"}</div>
-    </div>
+    <div class="sumline"><b>📅 ${new Date(s.date+"T00:00").toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric",month:"numeric"})}</b>${start!=null?` · ⏱ ${hhmm(start)}–${end}`:""}${kids?` · 👥 ${kids}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div>
     ${s.note?`<p class="tl-note" style="margin:8px 0 0">${esc(s.note)}</p>`:""}
     ${totalBox}
   </div>
   <div class="card" style="padding:4px 12px">${rows || `<p class="muted">Trénink zatím nemá žádná cvičení.</p>`}
-    <div class="tl tl-end"><div class="tl-time"><b>${end||""}</b></div><div class="tl-body" style="padding-top:2px"><b>Konec tréninku · celkem ${t} min</b> <span class="muted">(${items.length} cvičení)</span></div></div>
+    <div class="tl-endline">🏁 Konec${end?` ${end}`:""} · ${t} min · ${items.length} cvičení</div>
   </div>
   <div class="row noprint" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" id="edit">Upravit</button><button class="btn small" id="expand">Rozbalit vše</button><button class="btn small" id="print">Tisk / PDF</button><button class="btn small" id="dup">Duplikovat</button><span class="grow"></span><button class="btn danger small" id="del">Smazat</button></div>`;
   app.querySelectorAll(".tl-desc").forEach(p => p.onclick = () => p.classList.toggle("open"));
   mountThumbs(app);
-  app.querySelectorAll("[data-big]").forEach(th => th.onclick = () => { const box = app.querySelector(`[data-bigbox="${th.dataset.big}"]`); if(!box.hidden){ box.hidden = true; box.innerHTML = ""; return; } box.hidden = false; Anim.mount(box, th.dataset.thumb); });
+  app.querySelectorAll("[data-big]").forEach(th => th.onclick = () => { const box = app.querySelector(`[data-bigbox="${th.dataset.big}"]`); th.hidden = true; box.hidden = false; Anim.mount(box, th.dataset.thumb); const c = document.createElement("button"); c.type = "button"; c.className = "btn sm"; c.textContent = "✕ Zavřít ovládání"; c.onclick = () => { box.hidden = true; box.innerHTML = ""; th.hidden = false; }; box.querySelector(".animbar")?.append(c); });
   document.getElementById("back").onclick = () => { state.view=null; render(); };
   document.getElementById("edit").onclick = () => editSession(s);
   const ex = document.getElementById("expand");
@@ -1968,7 +2009,7 @@ function editSession(s={}){
   }
   function poolList(){
     const q = pickQ.toLowerCase();
-    return state.drills.filter(d => agesMatch(d, pickAges) && (!pickCats.size||pickCats.has(d.category)) && (!q || d.name.toLowerCase().includes(q)));
+    return state.drills.filter(d => !d.hidden && agesMatch(d, pickAges) && (!pickCats.size||pickCats.has(d.category)) && (!q || d.name.toLowerCase().includes(q)));
   }
   function drawPool(){
     const base = state.drills.filter(d => agesMatch(d, pickAges)), byType = state.drills.filter(d => !pickCats.size || pickCats.has(d.category));
