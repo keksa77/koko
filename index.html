@@ -2117,7 +2117,7 @@ async function loadInvites(){
     f.reset(); await loadInvites(); inviteMail(email);
   }; }
 }
-function setTitle(){ const m = myAges(); document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané${m.length ? " · " + esc(m.length>2 ? ageRange(m) : m.join("+")) : ""}</span>`; }
+function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
 function render(){
