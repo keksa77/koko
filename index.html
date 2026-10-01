@@ -1473,7 +1473,7 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const CATS = {
   rozcvicka:"Rozcvička", pohybova:"Pohybová hra", zabava:"Zábavná hra", koordinace:"Koordinace", rychlost:"Rychlost", sila:"Síla",
-  vedeni:"Vedení míče", prihravky:"Přihrávky", strelba:"Střelba", souboje:"Souboje", mala_hra:"Malá hra"
+  vedeni:"Vedení míče", prihravky:"Přihrávky", strelba:"Střelba", souboje:"Souboje", mala_hra:"Malá hra", socializacni:"Socializační hra"
 };
 const AGES = ["U5","U6","U7","U8","U9","U10","U11"];
 const AGE_INFO = { U5:"Předpřípravka (4–5 let)", U6:"Předpřípravka / minipřípravka (5–6 let)", U7:"Minipřípravka (6–7 let)", U8:"Mladší přípravka (7–8 let)", U9:"Mladší přípravka (8–9 let)", U10:"Starší přípravka (9–10 let)", U11:"Starší přípravka (10–11 let)" };
@@ -1834,7 +1834,7 @@ function editDrill(d={}){
 const FOTBAL_NAME = "Fotbal – závěrečná hra";
 const TEMPLATE = [
   { k:"rozcvicka", name:"Rozcvička", min:10, cats:["rozcvicka","koordinace"], col:"#60a5fa" },
-  { k:"pohyb", name:"Pohybové hry", min:20, cats:["pohybova","zabava","rychlost","sila"], col:"#f59e0b" },
+  { k:"pohyb", name:"Pohybové hry", min:20, cats:["pohybova","zabava","socializacni","rychlost","sila"], col:"#f59e0b" },
   { k:"mic", name:"Míčová cvičení", min:25, cats:["vedeni","prihravky","strelba"], col:"#a78bfa" },
   { k:"souboje", name:"Souboje, malé hry", min:15, cats:["souboje","mala_hra"], col:"#f87171" },
   { k:"fotbal", name:"Fotbal", min:20, fotbal:true, col:"#1f7a3f" }
