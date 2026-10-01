@@ -259,6 +259,10 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .gaprow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0}
 .insbtn{border:1px dashed var(--orgbd);background:var(--card);color:var(--orgtx);border-radius:999px;padding:5px 14px;font-size:14px;cursor:pointer;font-weight:600}
 .gaprow .joinbtn{margin:0}
+.gaprow{margin:1px 0;gap:6px;align-items:center}
+.gaprow .insbtn{padding:1px 10px;font-size:12px;font-weight:600;line-height:1.6}
+.gaprow .joinbtn{padding:1px 10px;font-size:12px;border-radius:10px;line-height:1.4}
+.gaprow .joinbtn small{font-size:11px}
 .itemed{border:1px solid var(--line);background:var(--chip);color:var(--brand);border-radius:8px;font-size:15px;padding:1px 8px;margin-left:4px;cursor:pointer;vertical-align:middle}
 .tl-org-ic{font-size:20px}.tl-org-t{white-space:pre-wrap;color:var(--ink)}
 .mv{flex:none;display:flex;flex-direction:column;gap:4px}
@@ -2680,7 +2684,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v38", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v39", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
