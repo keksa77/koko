@@ -208,7 +208,8 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .mvc button:disabled{opacity:.3;cursor:default}
 @keyframes gmoved{from{background:var(--sel)}to{background:transparent}}.gwrap.moved{animation:gmoved 1s}
 .hver{font-size:11px;opacity:.8;font-weight:600;margin-left:3px;letter-spacing:0;white-space:nowrap}
-.joinbtn,.splitbtn{display:block;margin:2px auto;border:1px dashed var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:5px 14px;font-size:14px;cursor:pointer}
+.joinbtn,.splitbtn{display:block;margin:2px auto;border:1px dashed var(--line);background:var(--card);color:var(--muted);border-radius:14px;padding:5px 14px;font-size:14px;cursor:pointer;text-align:center;max-width:100%}
+.joinbtn small,.splitbtn small{display:block;font-size:12px;opacity:.85;line-height:1.3}
 .joinbtn:active,.joinbtn:hover{border-color:var(--brand);color:var(--brand)}
 .splitbtn{margin:6px auto}.splitbtn:active,.splitbtn:hover{border-color:#b42318;color:#b42318}
 .gsec{border-top:1px solid var(--line);padding:4px 0}
@@ -2106,7 +2107,8 @@ function showSession(id){
     </div>`; };
   const groups = groupItems(items);
   const joinBtn = (gi) => { const g = groups[gi], prev = groups[gi-1]; if(!prev || isOrg(g.items[0]) || isOrg(prev.items[0]) || !g.items[0].id) return "";
-    return `<button type="button" class="joinbtn" data-join="${g.items[0].id}">⇉ spojit – běží zároveň</button>`; };
+    const nm = it => { const d = state.drills.find(x => x.id === it.drill_id); const n = d?.name || "cvičení"; return n.length > 22 ? n.slice(0, 21) + "…" : n; };
+    return `<button type="button" class="joinbtn" data-join="${g.items[0].id}">⇉ spojit s cvičením nad tím<small>„${esc(nm(prev.items[prev.items.length-1]))}“ a „${esc(nm(g.items[0]))}“ poběží ve stejný čas</small></button>`; };
   const mvc = gi => groups.length < 2 ? "" : `<span class="mvc noprint"><button type="button" data-gup="${gi}" aria-label="Posunout výš" ${gi===0?"disabled":""}>▲</button><button type="button" data-gdn="${gi}" aria-label="Posunout níž" ${gi===groups.length-1?"disabled":""}>▼</button></span>`;
   const flat = groups.flatMap(g => g.items);
   const before = gi => groups.slice(0, gi).reduce((a, g) => a + g.items.length, 0);
@@ -2118,7 +2120,7 @@ function showSession(id){
       return drillHtml(it, dur => `<b>${clock}</b><span>${dur}′</span>`, mvc(gi)); }
     return `<div class="tl-par"><div class="tl-par-h">${mvc(gi)}<span class="grow">⇉ Souběžně · ${g.items.length} stanoviště</span><span class="tl2-time"><b>${clock}</b><span>${g.dur}′</span></span></div>`
       + `<div class="muted noprint" style="font-size:14px;margin:-2px 0 4px">Blok trvá jako nejdelší cvičení. Délky měníš v Upravit.</div>`
-      + g.items.map((it,k) => (k && it.id ? `<button type="button" class="splitbtn noprint" data-split="${it.id}">✂ oddělit – poběží až po předchozím</button>` : "") + drillHtml(it, dur => `<b class="stan">Stan. ${k+1}</b><span>${dur}′</span>`)).join("") + `</div>`;
+      + g.items.map((it,k) => (k && it.id ? `<button type="button" class="splitbtn noprint" data-split="${it.id}">✂ oddělit<small>„${esc((state.drills.find(x=>x.id===it.drill_id)?.name)||"cvičení")}“ poběží až po „${esc((state.drills.find(x=>x.id===g.items[k-1].drill_id)?.name)||"předchozím")}“</small></button>` : "") + drillHtml(it, dur => `<b class="stan">Stan. ${k+1}</b><span>${dur}′</span>`)).join("") + `</div>`;
   })() + `</div>`).join("");
   const end = start!=null ? hhmm(start+t) : null;
   const blk = {}, parts = []; groups.forEach(g => g.items.forEach(it => { const b = isOrg(it) ? null : blockOf(state.drills.find(x=>x.id===it.drill_id)); const k = isOrg(it) ? "org" : b ? b.k : "jine"; const m = g.dur / g.items.length; blk[k] = (blk[k]||0) + m; parts.push({ m, col: isOrg(it) ? "#d6dbe0" : b ? b.col : "#94a3b8" }); }));
@@ -2586,7 +2588,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v31", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v32", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
