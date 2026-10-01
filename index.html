@@ -200,6 +200,7 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .vidlink{color:var(--brand);font-weight:700;text-decoration:none}
 .tl-endline{padding:10px 0;border-top:1px solid var(--line);font-weight:700;font-size:16px}
 .totd{margin-top:8px}
+.sbar{margin:0 0 10px}
 .appver{position:fixed;right:8px;bottom:4px;font-size:11px;color:var(--muted);opacity:.7;pointer-events:none;z-index:1}
 @media print{.appver{display:none}}
 .insorg{display:block;width:100%;border:1px dashed var(--line);background:none;color:var(--muted);font-size:13px;padding:3px 0;margin:2px 0;border-radius:8px;cursor:pointer}
@@ -1955,6 +1956,7 @@ function showSession(id){
       <div class="totline"><b>${t} min</b><span class="muted">z ${TEMPLATE_TOTAL}</span>${diff?`<span class="tplv ${dcls}">${diff>0?"+":"−"}${Math.abs(diff)}</span>`:`<span class="tplv ok">✓</span>`}<span class="grow"></span><span class="totmore">rozpis ▾</span></div></summary>
     <div class="totblk">${TEMPLATE.map(b=>`<span><i style="background:${b.col}"></i>${b.name} <b>${blk[b.k]||0}</b>/${b.min}</span>`).join("")}${blk.jine?`<span><i style="background:#94a3b8"></i>Ostatní <b>${blk.jine}</b></span>`:""}${blk.org?`<span><i style="background:#d6dbe0"></i>Organizace <b>${blk.org}</b></span>`:""}</div></details>`;
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
+  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span><button class="btn danger small" data-act="del">Smazat</button></div>
   <div class="card" style="padding:12px 14px">
     <h2 style="margin:0;font-size:20px">${esc(s.title)}</h2>
     <div class="sumline"><b>📅 ${new Date(s.date+"T00:00").toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric",month:"numeric"})}</b>${start!=null?` · ⏱ ${hhmm(start)}–${end}`:""}${kids?` · 👥 ${kids}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div>
@@ -1964,21 +1966,21 @@ function showSession(id){
   <div class="card" style="padding:4px 12px">${rows || `<p class="muted">Trénink zatím nemá žádná cvičení.</p>`}
     <div class="tl-endline">🏁 Konec${end?` ${end}`:""} · ${t} min · ${no} cvičení</div>
   </div>
-  <div class="row noprint" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" id="edit">Upravit</button><button class="btn small" id="expand">Rozbalit vše</button><button class="btn small" id="print">Tisk / PDF</button><button class="btn small" id="dup">Duplikovat</button><span class="grow"></span><button class="btn danger small" id="del">Smazat</button></div>`;
+  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span><button class="btn danger small" data-act="del">Smazat</button></div>`;
   app.querySelectorAll(".tl-desc").forEach(p => p.onclick = () => p.classList.toggle("open"));
   mountThumbs(app);
   app.querySelectorAll("[data-big]").forEach(th => th.onclick = () => { const box = app.querySelector(`[data-bigbox="${th.dataset.big}"]`); th.hidden = true; box.hidden = false; Anim.mount(box, th.dataset.thumb); const c = document.createElement("button"); c.type = "button"; c.className = "btn sm"; c.textContent = "✕ Zavřít ovládání"; c.onclick = () => { box.hidden = true; box.innerHTML = ""; th.hidden = false; }; box.querySelector(".animbar")?.append(c); });
   document.getElementById("back").onclick = () => { state.view=null; render(); };
-  document.getElementById("edit").onclick = () => editSession(s);
-  const ex = document.getElementById("expand");
-  ex.onclick = () => { const all = app.querySelectorAll("details.tl-more"); const open = ![...all].every(d=>d.open); all.forEach(d=>d.open=open); ex.textContent = open ? "Sbalit vše" : "Rozbalit vše"; };
-  document.getElementById("print").onclick = () => { app.querySelectorAll("details.tl-more").forEach(d=>d.open=true); print(); };
-  document.getElementById("dup").onclick = () => editSession({ ...s, id:null, date:new Date().toISOString().slice(0,10), title:s.title+" (kopie)" });
-  document.getElementById("del").onclick = async () => {
+  const on = (act, fn) => app.querySelectorAll(`[data-act="${act}"]`).forEach(b => b.onclick = fn);
+  on("edit", () => editSession(s));
+  on("expand", () => { const all = app.querySelectorAll("details.tl-more"); const open = ![...all].every(d=>d.open); all.forEach(d=>d.open=open); app.querySelectorAll('[data-act="expand"]').forEach(b => b.textContent = open ? "Sbalit vše" : "Rozbalit vše"); });
+  on("print", () => { app.querySelectorAll("details.tl-more").forEach(d=>d.open=true); print(); });
+  on("dup", () => editSession({ ...s, id:null, date:new Date().toISOString().slice(0,10), title:s.title+" (kopie)" }));
+  on("del", async () => {
     if(!confirm(`Smazat trénink „${s.title}“? Cvičení v zásobníku zůstanou.`)) return;
     const { error } = await sb.from("sessions").delete().eq("id", s.id); if(error) return fail(error);
     await loadSessions(); state.view=null; toast("Smazáno"); render();
-  };
+  });
   scrollTo(0,0);
 }
 function editSession(s={}){
@@ -2265,7 +2267,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v22", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v23", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
