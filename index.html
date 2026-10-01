@@ -259,6 +259,9 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .gaprow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0}
 .insbtn{border:1px dashed var(--orgbd);background:var(--card);color:var(--orgtx);border-radius:999px;padding:5px 14px;font-size:14px;cursor:pointer;font-weight:600}
 .gaprow .joinbtn{margin:0}
+.robanner{background:#e0f2fe;color:#075985;border-radius:10px;padding:8px 12px;margin:0 0 10px;font-size:15px}
+.badge.shb{background:#e0f2fe;color:#075985}
+.btn.shon{background:#e0f2fe;color:#075985}
 .stbtn{border:0;background:none;padding:0;cursor:pointer;flex:none}
 .invdt{font-size:13px;color:var(--muted)}
 .savegrp{display:inline-flex;align-items:center;gap:4px}
@@ -1809,7 +1812,10 @@ function renderAdd(){
 }
 async function loadSessions(){
   const { data, error } = await sb.from("sessions").select("*, session_drills(id, drill_id, position, duration_min, note, kind, title, parallel)").order("date",{ascending:false});
-  if(error) throw error; state.sessions = data;
+  if(error) throw error;
+  const me = state.user?.id;
+  state.sessions = data.filter(x => !x.user_id || x.user_id === me);
+  state.shared = data.filter(x => x.user_id && x.user_id !== me);
 }
 
 /* ---------- DRILLS ---------- */
@@ -2047,6 +2053,7 @@ const HELP = {
       <li><b>Rozbalit vše</b> – otevře všechna cvičení najednou včetně přípravy, pomůcek a na co dbát.</li>
       <li><b>Tisk / PDF</b> – vytiskne trénink nebo ho uloží jako PDF.</li>
       <li><b>Duplikovat</b> – vytvoří kopii tréninku s dnešním datem.</li>
+      <li><b>👥 Sdílet</b> – ostatní trenéři uvidí trénink v seznamu „Sdílené od trenérů“, jen ke čtení. Můžou si ho zduplikovat a upravit vlastní kopii. Dalším klepnutím sdílení zrušíš.</li>
       <li>Barevný proužek = minuty podle bloků šablony, svislá čárka = 90 min. <b>rozpis ▾</b> ukáže čísla.</li>
       <li><span class="hk">✎</span> u názvu cvičení – změníš délku a poznámku jen pro tento trénink, nebo cvičení z tréninku odebereš.</li>
       <li><b>📋 ＋ pokyn</b> mezi cvičeními vloží žlutě označenou poznámku (pití, rozdělení do skupin…), čas je nepovinný. Klepnutím na pokyn ho upravíš nebo odebereš.</li>
@@ -2156,15 +2163,22 @@ function renderSessions(){
       <div class="sdate"><span>${d.toLocaleDateString("cs-CZ",{weekday:"short"})}</span><b>${d.getDate()}.</b><span>${d.toLocaleDateString("cs-CZ",{month:"short"})}</span></div>
       <div class="grow"><p class="drill-title">${esc(s.title)} ${statusBadge(s)}</p>
       <div class="muted">${s.start_time?sessionTimes(s)+" · ":""}${drillCount(s)} cvičení · ${sessionTotal(s)} min${s.players_expected?` · 👥 ${s.players_expected}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div></div></div></div>`; };
-  app.innerHTML = state.sessions.length
+  const sh = (state.shared||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const shCard = s => { const d = new Date(s.date+"T00:00");
+    return `<div class="card shared" data-sopen="${s.id}" style="cursor:pointer"><div class="row" style="align-items:flex-start">
+      <div class="sdate"><span>${d.toLocaleDateString("cs-CZ",{weekday:"short"})}</span><b>${d.getDate()}.</b><span>${d.toLocaleDateString("cs-CZ",{month:"short"})}</span></div>
+      <div class="grow"><p class="drill-title">${esc(s.title)} <span class="badge shb">👥 sdílený</span></p>
+      <div class="muted">${s.shared_by?`od ${esc(s.shared_by)} · `:""}${s.start_time?sessionTimes(s)+" · ":""}${drillCount(s)} cvičení · ${sessionTotal(s)} min</div></div></div></div>`; };
+  const shHtml = sh.length ? `<h3 class="muted" style="margin:18px 0 8px">👥 Sdílené od trenérů</h3>${sh.map(shCard).join("")}` : "";
+  app.innerHTML = (state.sessions.length
     ? (upcoming.length?`<h3 class="muted" style="margin:0 0 8px">Nadcházející</h3>${upcoming.map(s=>card(s,false)).join("")}`:`<div class="empty">Žádný nadcházející trénink. Tlačítkem + ho poskládáš.</div>`)
       + (past.length?`<h3 class="muted" style="margin:18px 0 8px">Proběhlé</h3>${past.map(s=>card(s,true)).join("")}`:"")
-    : `<div class="empty"><p>Zatím žádný naplánovaný trénink.</p><p>Tlačítkem + si poskládej trénink ze cvičení.</p></div>`;
+    : `<div class="empty"><p>Zatím žádný naplánovaný trénink.</p><p>Tlačítkem + si poskládej trénink ze cvičení.</p></div>`) + shHtml;
   app.querySelectorAll("[data-sopen]").forEach(c => c.onclick = () => showSession(c.dataset.sopen));
 }
 const OPEN_ITEMS = new Set();
 function showSession(id){
-  const s = state.sessions.find(x=>x.id===id); if(!s) return;
+  let s = state.sessions.find(x=>x.id===id); const ro = !s; if(!s) s = (state.shared||[]).find(x=>x.id===id); if(!s) return;
   state.view = { type:"session", id }; fab.hidden = true;
   const items = [...(s.session_drills||[])].sort((a,b)=>a.position-b.position);
   const start = toMin(s.start_time);
@@ -2224,7 +2238,8 @@ function showSession(id){
       <div class="totline"><b>${t} min</b><span class="muted">z ${TEMPLATE_TOTAL}</span>${diff?`<span class="tplv ${dcls}">${diff>0?"+":"−"}${Math.abs(diff)}</span>`:`<span class="tplv ok">✓</span>`}<span class="grow"></span><span class="totmore">rozpis ▾</span></div></summary>
     <div class="totblk">${TEMPLATE.map(b=>`<span><i style="background:${b.col}"></i>${b.name} <b>${blk[b.k]||0}</b>/${b.min}</span>`).join("")}${blk.jine?`<span><i style="background:#94a3b8"></i>Ostatní <b>${blk.jine}</b></span>`:""}${blk.org?`<span><i style="background:#d6dbe0"></i>Organizace <b>${blk.org}</b></span>`:""}</div></details>`;
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
-  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><span class="savegrp"><button class="btn small savebtn" data-act="save">💾 Uložit trénink</button>${helpBtn("save")}</span><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>
+  ${ro?`<div class="robanner noprint">👥 Sdílený trénink${s.shared_by?` od <b>${esc(s.shared_by)}</b>`:""} – jen ke čtení. Klepni na <b>Duplikovat</b> a uprav si vlastní kopii.</div>`:""}
+  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><span class="savegrp"><button class="btn small savebtn" data-act="save">💾 Uložit trénink</button>${helpBtn("save")}</span><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><button class="btn small${s.shared?" shon":""}" data-act="share">${s.shared?"👥 Sdíleno ✓":"👥 Sdílet"}</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>
   <div class="card" style="padding:12px 14px">
     <div class="row" style="align-items:flex-start;gap:8px"><h2 class="grow" style="margin:0;font-size:20px">${esc(s.title)}</h2><button type="button" class="stbtn noprint" data-act="status" title="Klepnutím změníš stav">${statusBadge(s)}</button></div>
     <div class="sumline"><b>📅 ${new Date(s.date+"T00:00").toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric",month:"numeric"})}</b>${start!=null?` · ⏱ ${hhmm(start)}–${end}`:""}${kids?` · 👥 ${kids}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div>
@@ -2234,7 +2249,9 @@ function showSession(id){
   <div class="card" style="padding:4px 12px">${rows || `<p class="muted">Trénink zatím nemá žádná cvičení.</p>`}
     <div class="tl-endline">🏁 Konec${end?` ${end}`:""} · ${t} min · ${no} cvičení</div>
   </div>
-  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><span class="savegrp"><button class="btn small savebtn" data-act="save">💾 Uložit trénink</button>${helpBtn("save")}</span><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>`;
+  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><span class="savegrp"><button class="btn small savebtn" data-act="save">💾 Uložit trénink</button>${helpBtn("save")}</span><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><button class="btn small${s.shared?" shon":""}" data-act="share">${s.shared?"👥 Sdíleno ✓":"👥 Sdílet"}</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>`;
+  if(ro){ app.querySelectorAll('.itemed,.mvc,.gaprow,.orgbar-ed,.splitbtn,.stbtn,.savegrp,[data-act="edit"],[data-act="del"],[data-act="share"]').forEach(e => e.remove());
+    app.querySelectorAll("[data-orged]").forEach(e => { e.removeAttribute("data-orged"); e.removeAttribute("role"); e.removeAttribute("title"); }); }
   app.querySelectorAll(".tl-desc").forEach(p => p.onclick = () => p.classList.toggle("open"));
   const setTl = (el, open) => { el.classList.toggle("open", open); el.querySelector(".tl2-head")?.setAttribute("aria-expanded", open); const k = el.dataset.tl; open ? OPEN_ITEMS.add(k) : OPEN_ITEMS.delete(k); };
   app.querySelectorAll(".tl2[data-tl] > .tl2-head").forEach(h => { const tog = e => { if(e.target.closest("button,a")) return; setTl(h.parentElement, !h.parentElement.classList.contains("open")); };
@@ -2310,6 +2327,10 @@ function showSession(id){
       toast(`Trénink uložen${wasDraft ? " jako ✓ Připravený" : ""} · ${start!=null ? `${hhmm(start)}–${end} · ` : ""}${t} min`);
     }catch(e){ btns.forEach(b => { b.disabled = false; b.textContent = "💾 Uložit trénink"; }); fail(e); }
   });
+  on("share", async () => { const nv = !s.shared;
+    if(nv && !confirm("Sdílet trénink s ostatními trenéry? Uvidí ho jen ke čtení a můžou si udělat vlastní kopii.")) return;
+    const { error } = await sb.from("sessions").update({ shared:nv, shared_by: nv ? (state.user?.email || null) : null }).eq("id", s.id); if(error) return fail(error);
+    const y = scrollY; await loadSessions(); showSession(s.id); scrollTo(0, y); toast(nv ? "Trénink je sdílený s trenéry" : "Sdílení zrušeno – trénink vidíš jen ty"); });
   on("status", async () => { const nv = s.status === "ready" ? "draft" : "ready";
     const { error } = await sb.from("sessions").update({ status:nv }).eq("id", s.id); if(error) return fail(error);
     const y = scrollY; await loadSessions(); showSession(s.id); scrollTo(0, y); toast(nv === "ready" ? "Označeno jako ✓ Připravený" : "Označeno jako ✎ Rozpracovaný"); });
@@ -2719,7 +2740,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v41", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v42", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
