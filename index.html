@@ -259,6 +259,8 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .gaprow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0}
 .insbtn{border:1px dashed var(--orgbd);background:var(--card);color:var(--orgtx);border-radius:999px;padding:5px 14px;font-size:14px;cursor:pointer;font-weight:600}
 .gaprow .joinbtn{margin:0}
+.stbtn{border:0;background:none;padding:0;cursor:pointer;flex:none}
+.invdt{font-size:13px;color:var(--muted)}
 .savegrp{display:inline-flex;align-items:center;gap:4px}
 .gaprow{margin:1px 0;gap:6px;align-items:center}
 .gaprow .insbtn{padding:1px 10px;font-size:12px;font-weight:600;line-height:1.6}
@@ -2030,6 +2032,7 @@ const HELP = {
     <ul class="hlp">
       <li>Uloží trénink tak, jak ho teď vidíš na kartě: pořadí cvičení, pokyny i souběžné bloky.</li>
       <li><b>Přepočítá časy</b> – od začátku tréninku sečte délky cvičení (u souběžného bloku se počítá nejdelší cvičení, u výměny stanovišť všechna kola) a nastaví nový čas konce.</li>
+      <li>Rozpracovaný trénink se uložením označí jako <b>✓ Připravený</b>. Zpátky na rozpracovaný ho přepneš klepnutím na štítek stavu vedle názvu tréninku.</li>
       <li>Po uložení uvidíš dole potvrzení s časem tréninku, např. „17:00–17:45 · 45 min“.</li>
       <li>Posun ▲▼, úpravy přes ✎, pokyny i spojení cvičení se ukládají už samy hned. Tlačítko je pojistka – klidně ho použij vždycky, když s kartou skončíš.</li>
       <li>Délky cvičení, datum a název změníš přes <b>Upravit</b>.</li>
@@ -2038,7 +2041,8 @@ const HELP = {
     <ul class="hlp">
       <li><span class="hk">▲</span> <span class="hk">▼</span> u každého cvičení (nebo u rámečku souběžných cvičení) – posune ho o místo výš/níž přímo tady. Uloží se hned.</li>
       <li><b>Upravit</b> – otevře úpravu: délky, organizační pokyny, přidání a odebrání cvičení.</li>
-      <li><b>💾 Uložit trénink</b> – znovu uloží pořadí všech cvičení a pokynů a přepočítá časy od začátku tréninku. Změny na kartě se ukládají i samy, tohle je pojistka.</li>
+      <li>Štítek <b>✎ Rozpracovaný / ✓ Připravený</b> vedle názvu – klepnutím přepneš stav.</li>
+      <li><b>💾 Uložit trénink</b> – označí trénink jako připravený, znovu uloží pořadí všech cvičení a pokynů a přepočítá časy od začátku tréninku. Změny na kartě se ukládají i samy, tohle je pojistka.</li>
       <li>Cvičení jsou sbalená do řádku (číslo, název, čas, délka). <b>Klepnutím na řádek</b> se ukáže animace, popis a video, dalším klepnutím se zase sbalí.</li>
       <li><b>Rozbalit vše</b> – otevře všechna cvičení najednou včetně přípravy, pomůcek a na co dbát.</li>
       <li><b>Tisk / PDF</b> – vytiskne trénink nebo ho uloží jako PDF.</li>
@@ -2222,7 +2226,7 @@ function showSession(id){
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
   <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><span class="savegrp"><button class="btn small savebtn" data-act="save">💾 Uložit trénink</button>${helpBtn("save")}</span><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>
   <div class="card" style="padding:12px 14px">
-    <h2 style="margin:0;font-size:20px">${esc(s.title)}</h2>
+    <div class="row" style="align-items:flex-start;gap:8px"><h2 class="grow" style="margin:0;font-size:20px">${esc(s.title)}</h2><button type="button" class="stbtn noprint" data-act="status" title="Klepnutím změníš stav">${statusBadge(s)}</button></div>
     <div class="sumline"><b>📅 ${new Date(s.date+"T00:00").toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric",month:"numeric"})}</b>${start!=null?` · ⏱ ${hhmm(start)}–${end}`:""}${kids?` · 👥 ${kids}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div>
     ${s.note?`<p class="tl-note" style="margin:8px 0 0">${esc(s.note)}</p>`:""}
     ${totalBox}
@@ -2300,10 +2304,15 @@ function showSession(id){
       const ups = flat.map((it, pos) => ({ it, pos })).filter(x => x.it.id)
         .map(x => sb.from("session_drills").update({ position: x.pos, parallel: x.pos === 0 ? false : !!x.it.parallel }).eq("id", x.it.id));
       const res = await Promise.all(ups); const err = res.find(r => r.error); if(err) throw err.error;
+      const wasDraft = s.status !== "ready";
+      if(wasDraft){ const { error: e2 } = await sb.from("sessions").update({ status:"ready" }).eq("id", s.id); if(e2) throw e2; }
       const y = scrollY; await loadSessions(); showSession(s.id); scrollTo(0, y);
-      toast(`Trénink uložen · ${start!=null ? `${hhmm(start)}–${end} · ` : ""}${t} min`);
+      toast(`Trénink uložen${wasDraft ? " jako ✓ Připravený" : ""} · ${start!=null ? `${hhmm(start)}–${end} · ` : ""}${t} min`);
     }catch(e){ btns.forEach(b => { b.disabled = false; b.textContent = "💾 Uložit trénink"; }); fail(e); }
   });
+  on("status", async () => { const nv = s.status === "ready" ? "draft" : "ready";
+    const { error } = await sb.from("sessions").update({ status:nv }).eq("id", s.id); if(error) return fail(error);
+    const y = scrollY; await loadSessions(); showSession(s.id); scrollTo(0, y); toast(nv === "ready" ? "Označeno jako ✓ Připravený" : "Označeno jako ✎ Rozpracovaný"); });
   on("print", () => { app.querySelectorAll("details.tl-more").forEach(d=>d.open=true); print(); });
   on("dup", () => editSession({ ...s, id:null, date:new Date().toISOString().slice(0,10), title:s.title+" (kopie)" }));
   on("del", async () => {
@@ -2684,11 +2693,15 @@ function inviteMail(email){
 }
 async function loadInvites(){
   const box = document.getElementById("invList"); if(!box) return;
-  const { data, error } = await sb.from("invites").select("*").order("created_at", { ascending:false });
+  const [{ data, error }, st] = await Promise.all([sb.from("invites").select("*").order("created_at", { ascending:false }), sb.rpc("invite_user_stats")]);
   if(error){ box.textContent = "Pozvánky se nepodařilo načíst."; return; }
+  const U = new Map(((st && st.data) || []).map(u => [String(u.email).toLowerCase(), u]));
+  const dt = v => !v ? "" : new Date(v).toLocaleString("cs-CZ", { day:"numeric", month:"numeric", year:"numeric", hour:"2-digit", minute:"2-digit" });
+  const ustat = x => { const u = U.get(String(x.email).toLowerCase()); if(!u) return x.used_at ? `<br><span class="invdt">Registrace: ${dt(x.used_at)}</span>` : x.created_at ? `<br><span class="invdt">Pozván: ${dt(x.created_at)}</span>` : "";
+    return `<br><span class="invdt">Registrace: ${dt(u.registered_at)}${u.confirmed ? "" : " · e-mail nepotvrzen"}<br>Poslední přihlášení: ${dt(u.last_sign_in_at) || "zatím nikdy"}</span>`; };
   box.innerHTML = (data||[]).map(x => `<div class="row" style="border-top:1px solid var(--line);padding:10px 0;gap:8px;flex-wrap:wrap">
       <div class="grow" style="color:var(--ink);flex-basis:100%"><b style="word-break:break-all">${esc(x.email)}</b>${x.note?` <span class="muted">· ${esc(x.note)}</span>`:""}<br>
-      ${x.used_at?`<span class="tplv ok">✓ zaregistrován</span>`:`<span class="tplv under">⏳ čeká na registraci</span>`}</div>
+      ${x.used_at?`<span class="tplv ok">✓ zaregistrován</span>`:`<span class="tplv under">⏳ čeká na registraci</span>`}${ustat(x)}</div>
       ${x.used_at?"":`<button type="button" class="btn small primary" data-ishare="${esc(x.email)}">📱 Sdílet</button><button type="button" class="btn small" data-imail="${esc(x.email)}">📧 E-mail</button><button type="button" class="btn small danger" data-idel="${esc(x.email)}">Zrušit</button>`}</div>`).join("") || "Zatím žádné pozvánky.";
   box.querySelectorAll("[data-imail]").forEach(b => b.onclick = () => inviteMail(b.dataset.imail));
   box.querySelectorAll("[data-ishare]").forEach(b => b.onclick = () => inviteShare(b.dataset.ishare));
@@ -2706,7 +2719,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v40", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v41", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
