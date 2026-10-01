@@ -2344,6 +2344,8 @@ const GUIDE = [
       <li>Barevný proužek = minuty podle bloků šablony, čárka = 90 min. <b>rozpis ▾</b> ukáže čísla.</li>
       <li>Každé cvičení má číslo, čas začátku, délku, animaci a odkaz <b>▶ Video</b>.</li>
       <li>Souběžná cvičení jsou v zeleném rámečku jako <b>Stan. 1, Stan. 2…</b>; organizační pokyny v šedém pruhu 📋.</li>
+      <li><b>⇉ spojit s předchozím – běží zároveň</b> (tlačítko mezi dvěma cvičeními) – jedním klepnutím dáš cvičení do stejného času na jiné stanoviště. Uloží se hned.</li>
+      <li><b>✂ oddělit – poběží až po předchozím</b> (uvnitř zeleného rámečku) – cvičení zase rozdělí. Časy a konec tréninku se přepočítají.</li>
     </ul>`],
   ["🌐", "Přidat cvičení z webu", `
     <ul class="hlp">
@@ -2456,7 +2458,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v27", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v28", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
