@@ -93,15 +93,18 @@ dialog .dbody{padding:8px 16px 16px;overflow:auto}
 .tl-meta{font-size:15px;color:var(--muted);margin-top:2px}
 .tl-meta .warn{color:#b35c00;font-weight:600}
 .tl-note{font-size:16px;background:var(--chip);border-radius:8px;padding:4px 8px;margin-top:6px;white-space:pre-wrap}
-.tl-desc{margin:6px 0 0;font-size:16px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
-.tl-desc.open{display:block;-webkit-line-clamp:unset}
+.tl-desc{margin:6px 0 0;font-size:16px;line-height:1.4;max-height:7.2em;overflow:hidden;position:relative;cursor:pointer}
+.tl-desc::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.6em;background:linear-gradient(transparent,var(--card))}
+.tl-desc.open{max-height:none}.tl-desc.open::after{display:none}
+.tl-desc p,.tlm p{margin:2px 0}.tl-desc ul,.tlm ul{margin:2px 0 4px;padding-left:20px}.tl-desc li,.tlm li{margin:1px 0}
+.tlm{margin:6px 0}
 .tl-more{margin-top:4px;font-size:16px}
 .tl-more summary{color:var(--brand);font-weight:600;cursor:pointer;font-size:14px}
 .tl-more p{margin:4px 0;white-space:pre-wrap}
 .tl-end{padding:8px 0}
 .vid{flex:none;background:#c4302b;color:#fff;text-decoration:none;font-size:15px;font-weight:700;border-radius:8px;padding:5px 9px;white-space:nowrap}
 .print-only{display:none}
-@media print{.print-only{display:block;font-size:14px;color:#555;word-break:break-all} .tl-desc{display:block;-webkit-line-clamp:unset} .tl-more summary{display:none}}
+@media print{.print-only{display:block;font-size:14px;color:#555;word-break:break-all} .tl-desc{max-height:none} .tl-desc::after{display:none}.tl-more summary{display:none}}
 .ddrow{display:flex;gap:8px;margin:10px 0 8px}
 .dd{position:relative;flex:1;min-width:0}
 .ddbtn{width:100%;display:flex;align-items:center;gap:4px;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:9px 10px;font-size:16px;white-space:nowrap;cursor:pointer}
@@ -634,6 +637,48 @@ const Anim = (() => {
         p.b2.set(bx + 6 + fall * 12, top - 2 + (land - top - 6) * fall * fall, catchIt && lt < 1.1);
       });
     } };
+  };
+
+
+  SCENES["Na jelena"] = S => {
+    const T = 18, box = [40, 42, 260, 162];
+    S.area(20, 22, 260, 158); S.label("Celé hřiště – vedení míče", 150, 14);
+    const N = 6, kids = [...Array(N)].map((_, i) => ({ k: S.kid(S.COL.blue, { hair: i % 2 ? "#111" : undefined }), b: S.ball(), w: S.wander(i, box, T) }));
+    const big = S.el("g", {}, S.L.balls);
+    S.el("circle", { r: 8, fill: "#a855f7", stroke: "#581c87", "stroke-width": .8 }, big);
+    S.el("path", { d: "M-5 -3 Q-2 -7 3 -6", fill: "none", stroke: "#fff", "stroke-opacity": .7, "stroke-width": 1.6, "stroke-linecap": "round" }, big);
+    const hitLbl = S.label("Zásah! Nový jelen", 0, 0, "#b42318"); hitLbl.show(false);
+    // [čas střely, kdo střílí, kdo je jelen]: střelec se po zásahu stává jelenem
+    const shots = [[3.6, 1, 0], [9.6, 2, 1], [15.2, 0, 2]], FLY = .6, BACK = .7;
+    const jelenAt = t => { let j = 0; shots.forEach(([ts, sh]) => { if (t >= ts + FLY) j = sh; }); return j; };
+    const foot = (p, dir) => [p.x + dir * 6, p.y + 11];
+    return { T, caption: t => {
+      for (const [ts] of shots) if (t >= ts && t < ts + 2) return "Zásah! Kdo trefí velký míč, stává se jelenem";
+      return "Jelen vede velký míč, ostatní vedou svůj míč a snaží se ho trefit"; },
+      update(t) {
+        const raw = kids.map(o => o.w(t)), J = jelenAt(t), pos = raw.map(p => ({ ...p }));
+        // střelec se před střelou přiblíží k jelenovi (na cca 40 px) a po ní se vrací do hry
+        for (const [ts, sh, oldJ] of shots) {
+          const k = t < ts ? S.ramp(t, ts - 1.6, ts) : 1 - S.ramp(t, ts + 1.2, ts + 2.4);
+          if (k > 0) { const j = raw[oldJ], d = Math.hypot(raw[sh].x - j.x, raw[sh].y - j.y) || 1, tx = j.x + (raw[sh].x - j.x) / d * 40, ty = j.y + (raw[sh].y - j.y) / d * 40;
+            const e = S.ease(k); pos[sh] = { x: raw[sh].x + (tx - raw[sh].x) * e, y: raw[sh].y + (ty - raw[sh].y) * e }; }
+        }
+        kids.forEach((o, i) => { const p = pos[i]; o.k.set(p.x, p.y, { color: i === J ? "#f97316" : undefined, tag: i === J ? "Jelen" : null }); if (i !== J) o.k.set(p.x, p.y, { color: S.COL.blue, tag: null }); });
+        const dirOf = i => kids[i].k.dir || 1;
+        const bigPos = foot(pos[J], dirOf(J)); big.setAttribute("transform", `translate(${(bigPos[0] + dirOf(J) * 3).toFixed(1)},${(bigPos[1] - 4).toFixed(1)})`);
+        hitLbl.show(false);
+        kids.forEach((o, i) => {
+          let bp = i === J ? null : foot(pos[i], dirOf(i));
+          for (const [ts, sh, oldJ] of shots) {
+            if (i === sh && t >= ts && t < ts + FLY) { const tgt = foot(pos[oldJ], dirOf(oldJ)); bp = S.lerp(foot(pos[sh], dirOf(sh)), [tgt[0], tgt[1] - 4], S.ease((t - ts) / FLY)); }
+            if (i === sh && t >= ts + FLY && t < ts + FLY + BACK) bp = null;
+            if (i === oldJ && t >= ts + FLY && t < ts + FLY + BACK) bp = S.lerp(foot(pos[sh], dirOf(sh)), foot(pos[oldJ], dirOf(oldJ)), S.ease((t - ts - FLY) / BACK));
+            if (t >= ts + FLY - .05 && t < ts + FLY + 1.3) { hitLbl.set("Zásah! Nový jelen", pos[sh].x, pos[sh].y - 34); hitLbl.show(true); }
+          }
+          if (bp && i === J && !(shots.some(([ts, sh, oldJ]) => i === oldJ && t >= ts + FLY && t < ts + FLY + BACK))) bp = null;
+          o.b.set(bp ? bp[0] : 0, bp ? bp[1] : 0, !!bp);
+        });
+      } };
   };
 
   const VB = { "Krádež pokladu": [240, 240] };
@@ -2001,11 +2046,11 @@ function showSession(id){
     const kidsWarn = kids && ((d.players_min && kids < d.players_min) || (d.players_max && kids > d.players_max));
     const coachWarn = s.coaches && d.coaches_needed && d.coaches_needed > s.coaches;
     const more = [
-      d.setup && `<p><b>Příprava:</b> ${esc(d.setup)}</p>`,
-      d.equipment && `<p><b>Pomůcky:</b> ${esc(d.equipment)}</p>`,
-      d.area && `<p><b>Prostor:</b> ${esc(d.area)}</p>`,
-      d.coaching_points && `<p><b>Na co dbát:</b> ${esc(d.coaching_points)}</p>`,
-      d.variations && `<p><b>Varianty:</b> ${esc(d.variations)}</p>`
+      d.setup && `<div class="tlm"><b>Příprava:</b>${fmtText(d.setup)}</div>`,
+      d.equipment && `<div class="tlm"><b>Pomůcky:</b>${fmtText(d.equipment)}</div>`,
+      d.area && `<div class="tlm"><b>Prostor:</b> ${esc(d.area)}</div>`,
+      d.coaching_points && `<div class="tlm"><b>Na co dbát:</b>${fmtText(d.coaching_points)}</div>`,
+      d.variations && `<div class="tlm"><b>Varianty:</b>${fmtText(d.variations)}</div>`
     ].filter(Boolean).join("");
     const bk = blockOf(d);
     return `<div class="tl2">
@@ -2013,7 +2058,7 @@ function showSession(id){
       ${Anim.has(d.name)?`<div class="tl2-anim noprint" data-thumb="${esc(d.name)}" data-lbl data-big="${i}" title="Klepnutím ovládání animace"></div><div class="tl-big noprint" data-bigbox="${i}" hidden></div>`:""}
       <div class="tl-meta">${CATS[d.category]}${pl?` · <span${kidsWarn?' class="warn"':""}>👥 ${esc(pl)}</span>`:""}${d.coaches_needed?` · <span${coachWarn?' class="warn"':""}>🧑‍🏫 ${d.coaches_needed}</span>`:""}${url?` · <a class="vidlink noprint" style="white-space:nowrap" href="${esc(vidHref(d))}" target="_blank" rel="noopener">▶ Video${segLabel(d)?` (${fmtT(d.video_start||0)}–${d.video_end!=null?fmtT(d.video_end):""})`:""}</a>`:""}</div>
       ${it.note?`<div class="tl-note">📌 ${esc(it.note)}</div>`:""}
-      ${d.description?`<p class="tl-desc">${esc(d.description)}</p>`:""}
+      ${d.description?`<div class="tl-desc">${fmtText(d.description)}</div>`:""}
       ${more?`<details class="tl-more"><summary>Více (příprava, pomůcky, na co dbát)</summary>${more}</details>`:""}
       ${url?`<div class="print-only tl-url">Video: ${esc(url)}</div>`:""}
     </div>`; };
@@ -2478,7 +2523,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v29", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v30", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
