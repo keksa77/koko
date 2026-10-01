@@ -200,6 +200,8 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .vidlink{color:var(--brand);font-weight:700;text-decoration:none}
 .tl-endline{padding:10px 0;border-top:1px solid var(--line);font-weight:700;font-size:16px}
 .totd{margin-top:8px}
+.steps{margin:4px 0 10px;padding-left:22px;font-size:15px;line-height:1.45}.steps li{margin:4px 0}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(31,122,63,.5)}50%{box-shadow:0 0 0 8px rgba(31,122,63,0)}}.pulse{animation:pulse 1.2s 3}
 .tipbox{margin-top:10px;background:var(--sel);border-radius:10px;padding:10px 12px;font-size:15px;line-height:1.4}
 .tipbox ul{margin:6px 0 0;padding-left:20px}.tipbox li{margin:3px 0}
 #notices{max-width:760px;margin:0 auto;padding:0 16px}
@@ -2163,7 +2165,11 @@ function renderSettings(first=false){
     ${first?"":`<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:12px" class="muted">Přihlášen: ${esc(state.user.email)}</div>`}
   </div>
   ${!first && state.isAdmin ? `<div class="card" id="invCard"><h2 style="margin-top:0">Pozvánky trenérů</h2>
-    <p class="muted" style="margin-top:0">Registrace je jen na pozvánku. Zadej e-mail trenéra – pak mu pošli odkaz (otevře se ti e-mail s připraveným textem).</p>
+    <p class="muted" style="margin-top:0">Registrace je jen na pozvánku.</p>
+    <ol class="steps"><li>Zadej e-mail trenéra a klepni na <b>Pozvat</b>. Tím se mu registrace povolí.</li>
+      <li>Pošli mu pozvánku: <b>📱 Sdílet</b> (WhatsApp, SMS, Messenger…) nebo <b>📧 E-mail</b>. Text s odkazem je připravený.</li>
+      <li>Trenér otevře odkaz, zvolí si heslo a potvrdí e-mail, který mu přijde.</li>
+      <li>Hotovo, v přehledu níže uvidíš <span class="tplv ok">✓ zaregistrován</span>.</li></ol>
     <form id="invf" autocomplete="off"><label>E-mail trenéra</label><input type="email" name="email" required placeholder="trener@example.cz">
     <label>Poznámka (nepovinné)</label><input type="text" name="note" placeholder="např. U8, Zbrojovka">
     <button class="btn primary bigadd" type="submit">Pozvat</button></form>
@@ -2182,8 +2188,15 @@ function renderSettings(first=false){
 
 }
 function inviteLink(email){ return location.origin + location.pathname + "?invite=" + encodeURIComponent(email); }
+const inviteText = email => `Ahoj,\n\nzvu tě do aplikace KoKo – kouč kopané: databáze cvičení a plánovač tréninků pro přípravky.\n\nZaregistruj se tímto e-mailem (${email}) zde:\n${inviteLink(email)}\n\nPo registraci ti přijde potvrzovací e-mail.\n\n${state.user.email}`;
+async function inviteShare(email){
+  const text = inviteText(email);
+  if(navigator.share){ try{ await navigator.share({ title:"Pozvánka do aplikace KoKo", text }); return; }catch(e){ if(e && e.name==="AbortError") return; } }
+  try{ await navigator.clipboard.writeText(text); toast("Text pozvánky zkopírován – vlož ho do WhatsAppu nebo SMS"); }
+  catch(e){ prompt("Zkopíruj text pozvánky:", text); }
+}
 function inviteMail(email){
-  const body = `Ahoj,\n\nzvu tě do aplikace KoKo – kouč kopané: databáze cvičení a plánovač tréninků pro přípravky.\n\nZaregistruj se tímto e-mailem (${email}) zde:\n${inviteLink(email)}\n\nPo registraci ti přijde potvrzovací e-mail.\n\n${state.user.email}`;
+  const body = inviteText(email);
   location.href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Pozvánka do aplikace KoKo – kouč kopané")}&body=${encodeURIComponent(body)}`;
 }
 async function loadInvites(){
@@ -2193,21 +2206,24 @@ async function loadInvites(){
   box.innerHTML = (data||[]).map(x => `<div class="row" style="border-top:1px solid var(--line);padding:10px 0;gap:8px;flex-wrap:wrap">
       <div class="grow" style="color:var(--ink);flex-basis:100%"><b style="word-break:break-all">${esc(x.email)}</b>${x.note?` <span class="muted">· ${esc(x.note)}</span>`:""}<br>
       ${x.used_at?`<span class="tplv ok">✓ zaregistrován</span>`:`<span class="tplv under">⏳ čeká na registraci</span>`}</div>
-      ${x.used_at?"":`<button type="button" class="btn small" data-imail="${esc(x.email)}">Poslat znovu</button><button type="button" class="btn small danger" data-idel="${esc(x.email)}">Zrušit</button>`}</div>`).join("") || "Zatím žádné pozvánky.";
+      ${x.used_at?"":`<button type="button" class="btn small primary" data-ishare="${esc(x.email)}">📱 Sdílet</button><button type="button" class="btn small" data-imail="${esc(x.email)}">📧 E-mail</button><button type="button" class="btn small danger" data-idel="${esc(x.email)}">Zrušit</button>`}</div>`).join("") || "Zatím žádné pozvánky.";
   box.querySelectorAll("[data-imail]").forEach(b => b.onclick = () => inviteMail(b.dataset.imail));
+  box.querySelectorAll("[data-ishare]").forEach(b => b.onclick = () => inviteShare(b.dataset.ishare));
   box.querySelectorAll("[data-idel]").forEach(b => b.onclick = async () => { if(!confirm(`Zrušit pozvánku pro ${b.dataset.idel}?`)) return; const { error } = await sb.from("invites").delete().eq("email", b.dataset.idel); if(error) return fail(error); loadInvites(); });
   const f = document.getElementById("invf");
   if(f && !f.dataset.b){ f.dataset.b = 1; f.onsubmit = async e => {
     e.preventDefault(); const fd = new FormData(f), email = String(fd.get("email")||"").trim().toLowerCase();
     const { error } = await sb.from("invites").insert({ email, note: String(fd.get("note")||"").trim() || null });
     if(error){ if(/duplicate|unique/i.test(error.message)) toast("Tento e-mail už pozvánku má"); else return fail(error); }
-    else toast("Pozvánka uložena – pošli ji e-mailem");
-    f.reset(); await loadInvites(); inviteMail(email);
+    else toast("Pozvánka uložena – teď ji pošli tlačítkem 📱 Sdílet nebo 📧 E-mail");
+    f.reset(); await loadInvites();
+    const nb = document.querySelector(`[data-ishare="${CSS.escape(email)}"]`); if(nb){ nb.scrollIntoView({block:"center"}); nb.classList.add("pulse"); }
   }; }
 }
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
+const ADD_TAB_FOR_ALL = false;
 function render(){
   if(!state.user) return renderAuth(inviteEmail() ? "signup" : "login");
   document.getElementById("tabs").hidden = false; document.getElementById("logoutBtn").hidden = false;
@@ -2218,6 +2234,9 @@ function render(){
   if(state.view?.type==="drill") return showDrill(state.view.id);
   if(state.view?.type==="session") return showSession(state.view.id);
   if(state.tab==="settings") return renderSettings();
+  /* Záložka „Přidat cvičení“ je dočasně skrytá – vidí ji jen správce. Pro zpřístupnění všem nastav ADD_TAB_FOR_ALL = true. */
+  const addTab = document.querySelector('#tabs [data-tab="add"]'); if(addTab) addTab.hidden = !(ADD_TAB_FOR_ALL || state.isAdmin);
+  if(state.tab==="add" && !(ADD_TAB_FOR_ALL || state.isAdmin)) state.tab = "drills";
   if(state.tab==="add"){ renderAdd(); Promise.all([loadSubmissions(), loadDrills()]).then(()=>{ if(state.tab==="add" && !state.view) renderAdd(); }).catch(fail); return; }
   fab.hidden = false;
   state.tab==="drills" ? renderDrills() : renderSessions();
