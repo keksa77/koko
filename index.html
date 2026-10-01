@@ -196,6 +196,14 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .tl2-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .tl2-head .drill-title{margin:0;font-size:18px;min-width:0}
 .tl2-no{flex:none;width:26px;height:26px;border-radius:50%;color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:center}
+.tl2-head[role=button]{cursor:pointer;margin-bottom:0}
+.tl2.open .tl2-head{margin-bottom:6px}
+.tl2-body{display:none}.tl2.open .tl2-body{display:block}
+.tl2{padding:9px 0}
+.tl2-chev{flex:none;color:var(--muted);font-size:14px;transition:transform .15s;transform:rotate(-90deg)}
+.tl2.open .tl2-chev{transform:none}
+.tl2-sub{display:block;font-size:13px;font-weight:400;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media print{.tl2-body{display:block!important}.tl2-sub{display:none}}
 .tl2-time{flex:none;display:flex;flex-direction:column;align-items:flex-end;line-height:1.1}
 .tl2-time b{font-size:16px;color:var(--brand)}
 .tl2-time span{font-size:14px;color:var(--muted)}
@@ -700,46 +708,45 @@ const Anim = (() => {
 
 
   SCENES["1:1 fotbalový souboj"] = S => {
-    const T = 20, GY = 96;
-    S.area(22, 22, 256, 150, { dash: "none", sw: 1.4 }); S.el("line", { x1: 150, y1: 22, x2: 150, y2: 172, stroke: "#fff", "stroke-width": 1.2 }, S.L.field);
-    S.goal(30, GY, 0, 30); S.goal(270, GY, 180, 30);
-    S.label("Branka červených", 50, GY + 30); S.label("Branka modrých", 250, GY + 30);
+    const T = 20, GW = 30, G1 = 90, G2 = 210, GY = 22; // dvě branky vedle sebe, mezera = 3 šířky branky
+    S.area(22, 22, 256, 150, { dash: "none", sw: 1.4 });
+    S.goal(G1, GY, 90, GW); S.goal(G2, GY, 90, GW);
+    S.label("mezera = 3 šířky branky", 150, 34);
     const coach = S.kid(S.COL.coach, { cap: true });
-    const score = S.label("Modří 0 : 0 Červení", 150, 12);
+    const score = S.label("Modří 0 : 0 Červení", 56, 186);
     const gol = S.label("GÓL!", 0, 0, "#b42318"); gol.show(false);
-    // modrý útočí doprava, červený doleva
-    const B = S.track([[0, 130, 178], [0.9, 130, 178], [2.2, 146, 86], [3.5, 184, 84], [4.6, 214, 84], [5.2, 220, 88], [8.3, 76, 90], [9.3, 92, 92], [10.6, 142, 88], [11.3, 150, 86], [12.2, 132, 80], [12.9, 142, 84], [14.4, 244, 86], [15.1, 252, 86], [17, 200, 140], [20, 130, 178]]);
-    const R = S.track([[0, 170, 178], [0.9, 170, 178], [2.3, 162, 100], [3.5, 190, 104], [4.6, 222, 88], [5.4, 204, 88], [8.2, 62, 86], [9, 70, 90], [10.6, 160, 92], [11.3, 160, 100], [12.2, 140, 102], [12.9, 150, 104], [14.4, 230, 104], [15.1, 238, 92], [17, 214, 146], [20, 170, 178]]);
+    // oba hráči mohou útočit na kteroukoli z obou branek
+    const B = S.track([[0, 130, 178], [0.9, 130, 178], [2.2, 146, 98], [3.5, 178, 72], [4.6, 194, 54], [5.2, 200, 62], [8.3, 112, 58], [9.3, 120, 74], [10.6, 142, 98], [11.3, 150, 98], [12.2, 130, 86], [12.9, 142, 78], [14.4, 200, 50], [15.1, 204, 52], [17, 190, 130], [20, 130, 178]]);
+    const R = S.track([[0, 170, 178], [0.9, 170, 178], [2.3, 162, 108], [3.5, 190, 84], [4.6, 204, 58], [5.4, 180, 58], [7.4, 112, 50], [8.2, 98, 42], [9, 104, 56], [10.6, 160, 106], [11.3, 160, 108], [12.2, 142, 102], [12.9, 152, 94], [14.4, 186, 66], [15.1, 190, 62], [17, 214, 146], [20, 170, 178]]);
     const kB = S.kid(S.COL.blue), kR = S.kid(S.COL.red, { hair: "#c2410c" });
     const b1 = S.ball(), b2 = S.ball(), C = [150, 184];
     const ft = k => [k.x + (k.dir || 1) * 6, k.y + 11];
     const arc = (a, b, u) => { const p = S.lerp(a, b, S.ease(u)); return [p[0], p[1] - Math.sin(Math.PI * u) * 22]; };
-    return { T, caption: t => t < 2.2 ? "Trenér vhodí míč mezi dvojici – oba se o něj rozběhnou" : t < 4.6 ? "Kdo je u míče první, útočí na branku soupeře" : t < 8.7 ? "Druhý brání – po zisku míče hned útočí opačným směrem" : t < 11.3 ? "Po gólu trenér vhazuje další míč" : t < 15.2 ? "Klička, obrat a zakončení" : "Návrat k trenérovi, další dvojice",
+    let shot1 = null, shot2 = null;
+    return { T, caption: t => t < 2.2 ? "Trenér vhodí míč mezi dvojici – oba se o něj rozběhnou" : t < 4.6 ? "Kdo je u míče první, útočí – může na kteroukoli z obou branek" : t < 8.7 ? "Druhý brání – po zisku míče hned útočí, klidně na druhou branku" : t < 11.3 ? "Po gólu trenér vhazuje další míč" : t < 15.2 ? "Klička, obrat a zakončení" : "Návrat k trenérovi, další dvojice",
     update(t) {
       coach.set(C[0], C[1] - 10, { moving: false, tag: (t > 0.3 && t < 1.6) || (t > 9.4 && t < 10.6) ? "Hop!" : null });
       const pb = B(t), pr = R(t);
-      kB.set(pb.x, pb.y, { tag: t > 11.3 && t < 15.1 ? "Útočí" : null });
+      kB.set(pb.x, pb.y, { tag: (t > 2.4 && t < 4.4) || (t > 11.3 && t < 14.6) ? "Útočí" : null });
       kR.set(pr.x, pr.y, { tag: t > 4.6 && t < 6.2 ? "Zisk míče!" : (t > 6.2 && t < 8.2 ? "Útočí" : null) });
       const s = { b: 0, r: 0 };
-      // míč 1
       if (t < 0.9) b1.set(0, 0, false);
-      else if (t < 2.2) b1.set(...arc([C[0] + 5, C[1] - 6], [152, 97], (t - 0.9) / 1.3));
+      else if (t < 2.2) b1.set(...arc([C[0] + 5, C[1] - 6], [152, 109], (t - 0.9) / 1.3));
       else if (t < 4.6) b1.set(...ft(kB));
-      else if (t < 4.9) b1.set(...S.lerp([220, 95], ft(kR), S.ease((t - 4.6) / .3)));
-      else if (t < 8.2) b1.set(...ft(kR));
-      else if (t < 8.7) b1.set(...S.lerp([56, 97], [27, GY], S.ease((t - 8.2) / .5)));
-      else b1.set(27, GY, t < 10);
+      else if (t < 4.9) b1.set(...S.lerp([200, 65], ft(kR), S.ease((t - 4.6) / .3)));
+      else if (t < 8.2) { b1.set(...ft(kR)); shot1 = ft(kR); }
+      else if (t < 8.7) b1.set(...S.lerp(shot1 || [92, 53], [G1, GY - 3], S.ease((t - 8.2) / .5)));
+      else b1.set(G1, GY - 3, t < 10);
       if (t >= 8.7) s.r++;
-      // míč 2
       if (t < 9.8) b2.set(0, 0, false);
-      else if (t < 11.3) b2.set(...arc([C[0] + 5, C[1] - 6], [156, 97], (t - 9.8) / 1.5));
-      else if (t < 14.6) b2.set(...ft(kB));
-      else if (t < 15.1) b2.set(...S.lerp([250, 97], [273, GY], S.ease((t - 14.6) / .5)));
-      else b2.set(273, GY, t < 17);
-      if (t >= 15.1) s.b++;
-      score.set(`Modří ${s.b} : ${s.r} Červení`, 150, 12);
-      if (t >= 8.7 && t < 9.9) { gol.set("GÓL! Červení", 60, GY - 30); gol.show(true); }
-      else if (t >= 15.1 && t < 16.3) { gol.set("GÓL! Modří", 240, GY - 30); gol.show(true); }
+      else if (t < 11.3) b2.set(...arc([C[0] + 5, C[1] - 6], [156, 109], (t - 9.8) / 1.5));
+      else if (t < 14.4) { b2.set(...ft(kB)); shot2 = ft(kB); }
+      else if (t < 14.9) b2.set(...S.lerp(shot2 || [206, 61], [G2, GY - 3], S.ease((t - 14.4) / .5)));
+      else b2.set(G2, GY - 3, t < 17);
+      if (t >= 14.9) s.b++;
+      score.set(`Modří ${s.b} : ${s.r} Červení`, 56, 186);
+      if (t >= 8.7 && t < 9.9) { gol.set("GÓL!", G1, GY + 30); gol.show(true); }
+      else if (t >= 14.9 && t < 16.1) { gol.set("GÓL!", G2, GY + 30); gol.show(true); }
       else gol.show(false);
     } };
   };
@@ -2136,6 +2143,7 @@ function renderSessions(){
     : `<div class="empty"><p>Zatím žádný naplánovaný trénink.</p><p>Tlačítkem + si poskládej trénink ze cvičení.</p></div>`;
   app.querySelectorAll("[data-sopen]").forEach(c => c.onclick = () => showSession(c.dataset.sopen));
 }
+const OPEN_ITEMS = new Set();
 function showSession(id){
   const s = state.sessions.find(x=>x.id===id); if(!s) return;
   state.view = { type:"session", id }; fab.hidden = true;
@@ -2158,15 +2166,17 @@ function showSession(id){
       d.variations && `<div class="tlm"><b>Varianty:</b>${fmtText(d.variations)}</div>`
     ].filter(Boolean).join("");
     const bk = blockOf(d);
-    return `<div class="tl2">
-      <div class="tl2-head">${pre}<span class="tl2-no" style="background:${bk?bk.col:"#94a3b8"}">${no}</span><p class="drill-title grow">${esc(d.name)}${it.id?` <button type="button" class="itemed noprint" data-itemed="${it.id}" aria-label="Upravit v tréninku">✎</button>`:""}</p><span class="tl2-time">${timeHtml(dur)}</span></div>
+    const open = OPEN_ITEMS.has(it.id || ("i" + i));
+    return `<div class="tl2${open?" open":""}" data-tl="${esc(it.id || ("i" + i))}">
+      <div class="tl2-head" role="button" tabindex="0" aria-expanded="${open}">${pre}<span class="tl2-no" style="background:${bk?bk.col:"#94a3b8"}">${no}</span><p class="drill-title grow">${esc(d.name)}${it.id?` <button type="button" class="itemed noprint" data-itemed="${it.id}" aria-label="Upravit v tréninku">✎</button>`:""}${!open && it.note?`<span class="tl2-sub">📌 ${esc(it.note)}</span>`:""}</p><span class="tl2-time">${timeHtml(dur)}</span><span class="tl2-chev noprint" aria-hidden="true">▾</span></div>
+      <div class="tl2-body">
       ${Anim.has(d.name)?`<div class="tl2-anim noprint" data-thumb="${esc(d.name)}" data-lbl data-big="${i}" title="Klepnutím ovládání animace"></div><div class="tl-big noprint" data-bigbox="${i}" hidden></div>`:""}
       <div class="tl-meta">${CATS[d.category]}${pl?` · <span${kidsWarn?' class="warn"':""}>👥 ${esc(pl)}</span>`:""}${d.coaches_needed?` · <span${coachWarn?' class="warn"':""}>🧑‍🏫 ${d.coaches_needed}</span>`:""}${url?` · <a class="vidlink noprint" style="white-space:nowrap" href="${esc(vidHref(d))}" target="_blank" rel="noopener">▶ Video${segLabel(d)?` (${fmtT(d.video_start||0)}–${d.video_end!=null?fmtT(d.video_end):""})`:""}</a>`:""}</div>
       ${it.note?`<div class="tl-note">📌 ${esc(it.note)}</div>`:""}
       ${d.description?`<div class="tl-desc">${fmtText(d.description)}</div>`:""}
       ${more?`<details class="tl-more"><summary>Více (příprava, pomůcky, na co dbát)</summary>${more}</details>`:""}
       ${url?`<div class="print-only tl-url">Video: ${esc(url)}</div>`:""}
-    </div>`; };
+    </div></div>`; };
   const groups = groupItems(items);
   const joinBtn = (gi) => { const g = groups[gi], prev = groups[gi-1]; if(!prev || isOrg(g.items[0]) || isOrg(prev.items[0]) || !g.items[0].id) return "";
     const nm = it => { const d = state.drills.find(x => x.id === it.drill_id); const n = d?.name || "cvičení"; return n.length > 22 ? n.slice(0, 21) + "…" : n; };
@@ -2207,6 +2217,11 @@ function showSession(id){
   </div>
   <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>`;
   app.querySelectorAll(".tl-desc").forEach(p => p.onclick = () => p.classList.toggle("open"));
+  const setTl = (el, open) => { el.classList.toggle("open", open); el.querySelector(".tl2-head")?.setAttribute("aria-expanded", open); const k = el.dataset.tl; open ? OPEN_ITEMS.add(k) : OPEN_ITEMS.delete(k); };
+  app.querySelectorAll(".tl2[data-tl] > .tl2-head").forEach(h => { const tog = e => { if(e.target.closest("button,a")) return; setTl(h.parentElement, !h.parentElement.classList.contains("open")); };
+    h.onclick = tog; h.onkeydown = e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); tog(e); } }; });
+  const allOpen = [...app.querySelectorAll(".tl2[data-tl]")].every(x=>x.classList.contains("open")) && app.querySelector(".tl2[data-tl]");
+  if(allOpen) app.querySelectorAll('[data-act="expand"]').forEach(b => b.textContent = "Sbalit vše");
   mountThumbs(app);
   app.querySelectorAll("[data-big]").forEach(th => th.onclick = () => { const box = app.querySelector(`[data-bigbox="${th.dataset.big}"]`); th.hidden = true; box.hidden = false; Anim.mount(box, th.dataset.thumb); const c = document.createElement("button"); c.type = "button"; c.className = "btn sm"; c.textContent = "✕ Zavřít ovládání"; c.onclick = () => { box.hidden = true; box.innerHTML = ""; th.hidden = false; }; box.querySelector(".animbar")?.append(c); });
   document.getElementById("back").onclick = () => { state.view=null; render(); };
@@ -2262,7 +2277,7 @@ function showSession(id){
   app.querySelectorAll("[data-split]").forEach(b => b.onclick = () => setPar(b.dataset.split, false, b));
   const on = (act, fn) => app.querySelectorAll(`[data-act="${act}"]`).forEach(b => b.onclick = fn);
   on("edit", () => editSession(s));
-  on("expand", () => { const all = app.querySelectorAll("details.tl-more"); const open = ![...all].every(d=>d.open); all.forEach(d=>d.open=open); app.querySelectorAll('[data-act="expand"]').forEach(b => b.textContent = open ? "Sbalit vše" : "Rozbalit vše"); });
+  on("expand", () => { const all = [...app.querySelectorAll(".tl2[data-tl]")]; const open = !all.every(x=>x.classList.contains("open")); all.forEach(x => setTl(x, open)); app.querySelectorAll("details.tl-more").forEach(d=>d.open=open); app.querySelectorAll('[data-act="expand"]').forEach(b => b.textContent = open ? "Sbalit vše" : "Rozbalit vše"); });
   on("print", () => { app.querySelectorAll("details.tl-more").forEach(d=>d.open=true); print(); });
   on("dup", () => editSession({ ...s, id:null, date:new Date().toISOString().slice(0,10), title:s.title+" (kopie)" }));
   on("del", async () => {
@@ -2665,7 +2680,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v36", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v38", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
