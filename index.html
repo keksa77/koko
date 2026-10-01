@@ -200,6 +200,10 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .vidlink{color:var(--brand);font-weight:700;text-decoration:none}
 .tl-endline{padding:10px 0;border-top:1px solid var(--line);font-weight:700;font-size:16px}
 .totd{margin-top:8px}
+.mv{flex:none;display:flex;flex-direction:column;gap:4px}
+.mv button{width:40px;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--brand);font-size:16px;line-height:1;cursor:pointer;padding:0}
+.mv button:active{background:var(--sel)}.mv button:disabled{opacity:.3;cursor:default}
+@keyframes movedfl{from{background:var(--sel)}to{background:var(--card)}}.pi.moved{animation:movedfl .8s}
 .steps{margin:4px 0 10px;padding-left:22px;font-size:15px;line-height:1.45}.steps li{margin:4px 0}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(31,122,63,.5)}50%{box-shadow:0 0 0 8px rgba(31,122,63,0)}}.pulse{animation:pulse 1.2s 3}
 .tipbox{margin-top:10px;background:var(--sel);border-radius:10px;padding:10px 12px;font-size:15px;line-height:1.4}
@@ -230,6 +234,7 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 
 .pthumb{width:64px}
 .pi > .grow{flex:1 1 calc(100% - 180px)}
+@media (max-width:600px){.pi .handle{display:none}.pi > .grow{flex:1 1 calc(100% - 200px)}.pi .pt{width:auto;font-size:15px}}
 
 .totmain .tplv{white-space:normal}
 </style>
@@ -1790,7 +1795,7 @@ function editDrill(d={}){
       <div><label>Hráčů do</label><input type="number" name="players_max" min="1" value="${f("players_max")}"></div>
     </div>
     <label>Prostor</label><input type="text" name="area" placeholder="např. 20 × 20 m" value="${f("area")}">
-    <label>Pomůcky</label><input type="text" name="equipment" value="${f("equipment")}">
+    <label>Pomůcky</label><textarea name="equipment">${f("equipment")}</textarea>
     <label>Příprava / organizace</label><textarea name="setup">${f("setup")}</textarea>
     <label>Průběh cvičení</label><textarea name="description">${f("description")}</textarea>
     <label>Na co dbát (koučovací body)</label><textarea name="coaching_points">${f("coaching_points")}</textarea>
@@ -1990,7 +1995,7 @@ function editSession(s={}){
       <div id="tpl" class="tpl"></div>
       <p class="muted" style="margin:2px 0 12px">Klepnutím na část šablony se zásobník vyfiltruje na vhodné typy cvičení.</p>
       <div class="row"><strong class="grow">Rozvrh tréninku</strong><span class="muted" id="tot"></span></div>
-      <p class="muted" style="margin:2px 0 8px">Přetáhni cvičení za úchyt ⠿ ze zásobníku sem, nebo klepni na +. Pořadí měníš přetažením, délku tlačítky − / +.</p>
+      <p class="muted" style="margin:2px 0 8px">Přetáhni cvičení za úchyt ⠿ ze zásobníku sem, nebo klepni na +. Pořadí měníš šipkami ▲ ▼ (nebo přetažením za ⠿), délku tlačítky − / +.</p>
       <div id="plan" class="plan"></div>
     </div>
     <div class="card">
@@ -2035,6 +2040,7 @@ function editSession(s={}){
   function drawPlan(){
     plan.innerHTML = items.length ? items.map((it,i)=>{ const d=findD(it.drill_id);
       return `<div class="pi" data-i="${i}">
+        <div class="mv"><button type="button" data-up="${i}" aria-label="Posunout výš" ${i===0?"disabled":""}>▲</button><button type="button" data-down="${i}" aria-label="Posunout níž" ${i===items.length-1?"disabled":""}>▼</button></div>
         <span class="handle" data-h="plan" aria-label="Přesunout">⠿</span>
         <span class="pt"></span>
         ${d && Anim.has(d.name)?`<div class="thumb pthumb" data-thumb="${esc(d.name)}"></div>`:""}
@@ -2050,6 +2056,10 @@ function editSession(s={}){
       : `<div class="dropempty">Sem přetáhni cvičení ze zásobníku</div>`;
     plan.querySelectorAll("[data-dm]").forEach(b => b.onclick = () => { const it=items[b.dataset.dm]; it.duration_min=Math.max(1,(it.duration_min||0)-1); drawPlan(); });
     plan.querySelectorAll("[data-dp]").forEach(b => b.onclick = () => { const it=items[b.dataset.dp]; it.duration_min=Math.min(90,(it.duration_min||0)+1); drawPlan(); });
+    const move = (i, j) => { if(j<0 || j>=items.length) return; [items[i], items[j]] = [items[j], items[i]]; drawPlan();
+      const r = plan.querySelector(`.pi[data-i="${j}"]`); if(r){ r.classList.add("moved"); const btn = r.querySelector(j<i?"[data-up]":"[data-down]"); (btn && !btn.disabled ? btn : r.querySelector("[data-up],[data-down]"))?.focus({preventScroll:true}); r.scrollIntoView({block:"nearest", behavior:"smooth"}); } };
+    plan.querySelectorAll("[data-up]").forEach(b => b.onclick = () => move(+b.dataset.up, +b.dataset.up - 1));
+    plan.querySelectorAll("[data-down]").forEach(b => b.onclick = () => move(+b.dataset.down, +b.dataset.down + 1));
     plan.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { items.splice(+b.dataset.rm,1); drawPlan(); drawPool(); });
     plan.querySelectorAll("[data-note]").forEach(inp => inp.oninput = () => { items[inp.dataset.note].note = inp.value; });
     mountThumbs(plan);
