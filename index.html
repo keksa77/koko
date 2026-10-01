@@ -259,6 +259,7 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .gaprow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0}
 .insbtn{border:1px dashed var(--orgbd);background:var(--card);color:var(--orgtx);border-radius:999px;padding:5px 14px;font-size:14px;cursor:pointer;font-weight:600}
 .gaprow .joinbtn{margin:0}
+.savegrp{display:inline-flex;align-items:center;gap:4px}
 .gaprow{margin:1px 0;gap:6px;align-items:center}
 .gaprow .insbtn{padding:1px 10px;font-size:12px;font-weight:600;line-height:1.6}
 .gaprow .joinbtn{padding:1px 10px;font-size:12px;border-radius:10px;line-height:1.4}
@@ -2025,11 +2026,21 @@ const HELP = {
       <li>V zásobníku přidáš cvičení tlačítkem <span class="hk">+</span> – vloží se před závěrečný fotbal.</li>
     </ul>
     <p class="muted">Nic se neuloží, dokud neklepneš na <b>Uložit trénink</b>.</p>` },
+  save: { title:"Nápověda – 💾 Uložit trénink", html:`
+    <ul class="hlp">
+      <li>Uloží trénink tak, jak ho teď vidíš na kartě: pořadí cvičení, pokyny i souběžné bloky.</li>
+      <li><b>Přepočítá časy</b> – od začátku tréninku sečte délky cvičení (u souběžného bloku se počítá nejdelší cvičení, u výměny stanovišť všechna kola) a nastaví nový čas konce.</li>
+      <li>Po uložení uvidíš dole potvrzení s časem tréninku, např. „17:00–17:45 · 45 min“.</li>
+      <li>Posun ▲▼, úpravy přes ✎, pokyny i spojení cvičení se ukládají už samy hned. Tlačítko je pojistka – klidně ho použij vždycky, když s kartou skončíš.</li>
+      <li>Délky cvičení, datum a název změníš přes <b>Upravit</b>.</li>
+    </ul>` },
   session: { title:"Nápověda – karta tréninku", html:`
     <ul class="hlp">
       <li><span class="hk">▲</span> <span class="hk">▼</span> u každého cvičení (nebo u rámečku souběžných cvičení) – posune ho o místo výš/níž přímo tady. Uloží se hned.</li>
       <li><b>Upravit</b> – otevře úpravu: délky, organizační pokyny, přidání a odebrání cvičení.</li>
-      <li><b>Rozbalit vše</b> – ukáže u všech cvičení přípravu, pomůcky a na co dbát.</li>
+      <li><b>💾 Uložit trénink</b> – znovu uloží pořadí všech cvičení a pokynů a přepočítá časy od začátku tréninku. Změny na kartě se ukládají i samy, tohle je pojistka.</li>
+      <li>Cvičení jsou sbalená do řádku (číslo, název, čas, délka). <b>Klepnutím na řádek</b> se ukáže animace, popis a video, dalším klepnutím se zase sbalí.</li>
+      <li><b>Rozbalit vše</b> – otevře všechna cvičení najednou včetně přípravy, pomůcek a na co dbát.</li>
       <li><b>Tisk / PDF</b> – vytiskne trénink nebo ho uloží jako PDF.</li>
       <li><b>Duplikovat</b> – vytvoří kopii tréninku s dnešním datem.</li>
       <li>Barevný proužek = minuty podle bloků šablony, svislá čárka = 90 min. <b>rozpis ▾</b> ukáže čísla.</li>
@@ -2209,7 +2220,7 @@ function showSession(id){
       <div class="totline"><b>${t} min</b><span class="muted">z ${TEMPLATE_TOTAL}</span>${diff?`<span class="tplv ${dcls}">${diff>0?"+":"−"}${Math.abs(diff)}</span>`:`<span class="tplv ok">✓</span>`}<span class="grow"></span><span class="totmore">rozpis ▾</span></div></summary>
     <div class="totblk">${TEMPLATE.map(b=>`<span><i style="background:${b.col}"></i>${b.name} <b>${blk[b.k]||0}</b>/${b.min}</span>`).join("")}${blk.jine?`<span><i style="background:#94a3b8"></i>Ostatní <b>${blk.jine}</b></span>`:""}${blk.org?`<span><i style="background:#d6dbe0"></i>Organizace <b>${blk.org}</b></span>`:""}</div></details>`;
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
-  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>
+  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><span class="savegrp"><button class="btn small savebtn" data-act="save">💾 Uložit trénink</button>${helpBtn("save")}</span><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>
   <div class="card" style="padding:12px 14px">
     <h2 style="margin:0;font-size:20px">${esc(s.title)}</h2>
     <div class="sumline"><b>📅 ${new Date(s.date+"T00:00").toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric",month:"numeric"})}</b>${start!=null?` · ⏱ ${hhmm(start)}–${end}`:""}${kids?` · 👥 ${kids}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div>
@@ -2219,7 +2230,7 @@ function showSession(id){
   <div class="card" style="padding:4px 12px">${rows || `<p class="muted">Trénink zatím nemá žádná cvičení.</p>`}
     <div class="tl-endline">🏁 Konec${end?` ${end}`:""} · ${t} min · ${no} cvičení</div>
   </div>
-  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>`;
+  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><span class="savegrp"><button class="btn small savebtn" data-act="save">💾 Uložit trénink</button>${helpBtn("save")}</span><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>`;
   app.querySelectorAll(".tl-desc").forEach(p => p.onclick = () => p.classList.toggle("open"));
   const setTl = (el, open) => { el.classList.toggle("open", open); el.querySelector(".tl2-head")?.setAttribute("aria-expanded", open); const k = el.dataset.tl; open ? OPEN_ITEMS.add(k) : OPEN_ITEMS.delete(k); };
   app.querySelectorAll(".tl2[data-tl] > .tl2-head").forEach(h => { const tog = e => { if(e.target.closest("button,a")) return; setTl(h.parentElement, !h.parentElement.classList.contains("open")); };
@@ -2282,6 +2293,17 @@ function showSession(id){
   const on = (act, fn) => app.querySelectorAll(`[data-act="${act}"]`).forEach(b => b.onclick = fn);
   on("edit", () => editSession(s));
   on("expand", () => { const all = [...app.querySelectorAll(".tl2[data-tl]")]; const open = !all.every(x=>x.classList.contains("open")); all.forEach(x => setTl(x, open)); app.querySelectorAll("details.tl-more").forEach(d=>d.open=open); app.querySelectorAll('[data-act="expand"]').forEach(b => b.textContent = open ? "Sbalit vše" : "Rozbalit vše"); });
+  on("save", async () => {
+    const btns = app.querySelectorAll('[data-act="save"]'); btns.forEach(b => { b.disabled = true; b.textContent = "Ukládám…"; });
+    try{
+      const flat = groups.flatMap(g => g.items);
+      const ups = flat.map((it, pos) => ({ it, pos })).filter(x => x.it.id)
+        .map(x => sb.from("session_drills").update({ position: x.pos, parallel: x.pos === 0 ? false : !!x.it.parallel }).eq("id", x.it.id));
+      const res = await Promise.all(ups); const err = res.find(r => r.error); if(err) throw err.error;
+      const y = scrollY; await loadSessions(); showSession(s.id); scrollTo(0, y);
+      toast(`Trénink uložen · ${start!=null ? `${hhmm(start)}–${end} · ` : ""}${t} min`);
+    }catch(e){ btns.forEach(b => { b.disabled = false; b.textContent = "💾 Uložit trénink"; }); fail(e); }
+  });
   on("print", () => { app.querySelectorAll("details.tl-more").forEach(d=>d.open=true); print(); });
   on("dup", () => editSession({ ...s, id:null, date:new Date().toISOString().slice(0,10), title:s.title+" (kopie)" }));
   on("del", async () => {
@@ -2684,7 +2706,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v39", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v40", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
