@@ -12,12 +12,12 @@
 <style>
 :root{
   --bg:#f4f6f3; --card:#ffffff; --ink:#1b2420; --muted:#48534d; --line:#dfe5e1;
-  --brand:#1f7a3f; --brand-ink:#ffffff; --accent:#f2b705; --danger:#c0392b; --chip:#e8efe9;
+  --brand:#1f7a3f; --brand-ink:#ffffff; --accent:#f2b705; --danger:#c0392b; --chip:#e8efe9; --orgbg:#fff4d6; --orgbd:#f59e0b; --orgtx:#92400e;
   --shadow:0 1px 3px rgba(0,0,0,.08); --sel:#e3f2e7;
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#111614; --card:#1a211e; --ink:#e7ece9; --muted:#b3c0b9; --line:#2b3531;
-    --brand:#35a862; --brand-ink:#08130c; --chip:#243029; --shadow:none; --sel:#1d3526; }
+    --brand:#35a862; --brand-ink:#08130c; --chip:#243029; --shadow:none; --sel:#1d3526; --orgbg:#3a2e12; --orgbd:#f59e0b; --orgtx:#fcd34d; }
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -230,11 +230,16 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .sbar{margin:0 0 10px}
 .appver{position:fixed;right:8px;bottom:4px;font-size:11px;color:var(--muted);opacity:.7;pointer-events:none;z-index:1}
 @media print{.appver{display:none}}
-.insorg{display:block;width:100%;border:1px dashed var(--line);background:none;color:var(--muted);font-size:13px;padding:3px 0;margin:2px 0;border-radius:8px;cursor:pointer}
+.insorg{display:block;width:100%;border:1px dashed var(--orgbd);background:none;color:var(--orgtx);font-size:13px;padding:3px 0;margin:2px 0;border-radius:8px;cursor:pointer}
 .insorg:hover,.insorg:active{color:var(--brand);border-color:var(--brand)}
-.pi.org{background:var(--chip);border-radius:10px;padding-left:4px}
+.pi.org{background:var(--orgbg);border-left:4px solid var(--orgbd);border-radius:10px;padding-left:6px}
 .pi.org .pn{font-size:15px;color:var(--muted)}
-.tl-org{display:flex;align-items:center;gap:10px;margin:6px 0;padding:8px 10px;border-radius:10px;background:var(--chip);font-size:16px}
+.tl-org{display:flex;align-items:center;gap:10px;margin:8px 0;padding:10px 12px;border-radius:10px;background:var(--orgbg);border-left:5px solid var(--orgbd);font-size:16px}
+.tl-org [data-orged]{cursor:pointer}.tl-org-ed{font-size:13px;color:var(--orgtx);font-weight:600;margin-left:4px}
+.gaprow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0}
+.insbtn{border:1px dashed var(--orgbd);background:var(--card);color:var(--orgtx);border-radius:999px;padding:5px 14px;font-size:14px;cursor:pointer;font-weight:600}
+.gaprow .joinbtn{margin:0}
+.itemed{border:1px solid var(--line);background:var(--chip);color:var(--brand);border-radius:8px;font-size:15px;padding:1px 8px;margin-left:4px;cursor:pointer;vertical-align:middle}
 .tl-org-ic{font-size:20px}.tl-org-t{white-space:pre-wrap;color:var(--ink)}
 .mv{flex:none;display:flex;flex-direction:column;gap:4px}
 .mv button{width:40px;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--brand);font-size:16px;line-height:1;cursor:pointer;padding:0}
@@ -1959,6 +1964,8 @@ const HELP = {
       <li><b>Tisk / PDF</b> – vytiskne trénink nebo ho uloží jako PDF.</li>
       <li><b>Duplikovat</b> – vytvoří kopii tréninku s dnešním datem.</li>
       <li>Barevný proužek = minuty podle bloků šablony, svislá čárka = 90 min. <b>rozpis ▾</b> ukáže čísla.</li>
+      <li><span class="hk">✎</span> u názvu cvičení – změníš délku a poznámku jen pro tento trénink, nebo cvičení z tréninku odebereš.</li>
+      <li><b>📋 ＋ pokyn</b> mezi cvičeními vloží žlutě označené organizační pokyny (pití, rozdělení do skupin…). Klepnutím na pokyn ho upravíš nebo odebereš.</li>
       <li><b>⇉ Souběžně</b> – cvičení v rámečku probíhají ve stejný čas na různých stanovištích (Stan. 1, 2…).</li>
       <li>Mezi dvěma cvičeními je tlačítko <b>⇉ spojit s předchozím</b> – jedním klepnutím je dáš do stejného času. Uvnitř rámečku <b>✂ oddělit</b> je zase rozdělí. Uloží se hned.</li>
       <li>Klepnutím na animaci se zobrazí ovládání (pauza, rychlost, od začátku).</li>
@@ -1966,6 +1973,41 @@ const HELP = {
       <li>Klepnutím na popis cvičení se rozbalí celý text.</li>
     </ul>` }
 };
+function itemSheet(it, d, onSave, onDelete, onOpen){
+  const bg = document.createElement("div"); bg.className = "sheetbg"; let dur = Number(it.duration_min)||10;
+  bg.innerHTML = `<div class="sheet" role="dialog" aria-label="Cvičení v tréninku"><h2>${esc(d?.name||"Cvičení")}</h2>
+    <p class="muted" style="margin-top:0">Změny platí jen pro tento trénink.</p>
+    <div class="row" style="align-items:center;gap:10px"><span class="grow"><b>Délka v tréninku</b></span><div class="dur"><button type="button" data-od="-1">−</button><b id="itD">${dur}</b><small>min</small><button type="button" data-od="1">+</button></div></div>
+    <label>Poznámka (kdo vede, stanoviště, úprava pravidel…)</label><textarea id="itN" style="min-height:80px">${esc(it.note||"")}</textarea>
+    <button type="button" class="btn primary bigadd" id="itS" style="margin-top:12px">Uložit</button>
+    <button type="button" class="btn" id="itO" style="width:100%;margin-top:6px">Otevřít detail cvičení</button>
+    <button type="button" class="btn danger" id="itX" style="width:100%;margin-top:6px">Odebrat z tréninku</button>
+    <button type="button" class="btn" data-close="1" style="width:100%;margin-top:6px">Zrušit</button></div>`;
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.onclick = e => { if(e.target===bg || e.target.closest("[data-close]")) close(); };
+  bg.querySelectorAll("[data-od]").forEach(b => b.onclick = () => { dur = Math.min(90, Math.max(1, dur + Number(b.dataset.od))); bg.querySelector("#itD").textContent = dur; });
+  bg.querySelector("#itS").onclick = async e => { e.target.disabled = true; await onSave(dur, bg.querySelector("#itN").value.trim()); close(); };
+  bg.querySelector("#itO").onclick = () => { close(); onOpen(); };
+  bg.querySelector("#itX").onclick = async () => { if(!confirm("Odebrat cvičení z tohoto tréninku? V katalogu zůstane.")) return; await onDelete(); close(); };
+}
+function orgSheet(it, onSave, onDelete){
+  const bg = document.createElement("div"); bg.className = "sheetbg"; let dur = Number(it.duration_min)||2;
+  bg.innerHTML = `<div class="sheet orgsheet" role="dialog" aria-label="Organizační pokyny"><h2>📋 Organizační pokyny</h2>
+    <p class="muted" style="margin-top:0">Např. pití, rozdělení do skupin, přesun na hřiště, vysvětlení pravidel.</p>
+    <textarea id="ogT" placeholder="Co se v té chvíli děje…" style="min-height:90px">${esc(it.title||"")}</textarea>
+    <div class="row" style="margin-top:10px;align-items:center;gap:10px"><span class="grow"><b>Délka</b></span><div class="dur"><button type="button" data-od="-1">−</button><b id="ogD">${dur}</b><small>min</small><button type="button" data-od="1">+</button></div></div>
+    <button type="button" class="btn primary bigadd" id="ogS" style="margin-top:12px">Uložit pokyn</button>
+    ${onDelete?`<button type="button" class="btn danger" id="ogX" style="width:100%;margin-top:6px">Odebrat pokyn</button>`:""}
+    <button type="button" class="btn" data-close="1" style="width:100%;margin-top:6px">Zrušit</button></div>`;
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.onclick = e => { if(e.target===bg || e.target.closest("[data-close]")) close(); };
+  bg.querySelectorAll("[data-od]").forEach(b => b.onclick = () => { dur = Math.min(60, Math.max(1, dur + Number(b.dataset.od))); bg.querySelector("#ogD").textContent = dur; });
+  bg.querySelector("#ogS").onclick = async e => { e.target.disabled = true; await onSave(bg.querySelector("#ogT").value.trim(), dur); close(); };
+  const x = bg.querySelector("#ogX"); if(x) x.onclick = async () => { if(!confirm("Odebrat tento pokyn?")) return; await onDelete(); close(); };
+  setTimeout(() => bg.querySelector("#ogT").focus(), 50);
+}
 function showHelp(key){
   const h = HELP[key]; if(!h) return;
   const bg = document.createElement("div"); bg.className = "sheetbg";
@@ -2054,7 +2096,7 @@ function showSession(id){
     ].filter(Boolean).join("");
     const bk = blockOf(d);
     return `<div class="tl2">
-      <div class="tl2-head">${pre}<span class="tl2-no" style="background:${bk?bk.col:"#94a3b8"}">${no}</span><p class="drill-title grow">${esc(d.name)}</p><span class="tl2-time">${timeHtml(dur)}</span></div>
+      <div class="tl2-head">${pre}<span class="tl2-no" style="background:${bk?bk.col:"#94a3b8"}">${no}</span><p class="drill-title grow">${esc(d.name)}${it.id?` <button type="button" class="itemed noprint" data-itemed="${it.id}" aria-label="Upravit v tréninku">✎</button>`:""}</p><span class="tl2-time">${timeHtml(dur)}</span></div>
       ${Anim.has(d.name)?`<div class="tl2-anim noprint" data-thumb="${esc(d.name)}" data-lbl data-big="${i}" title="Klepnutím ovládání animace"></div><div class="tl-big noprint" data-bigbox="${i}" hidden></div>`:""}
       <div class="tl-meta">${CATS[d.category]}${pl?` · <span${kidsWarn?' class="warn"':""}>👥 ${esc(pl)}</span>`:""}${d.coaches_needed?` · <span${coachWarn?' class="warn"':""}>🧑‍🏫 ${d.coaches_needed}</span>`:""}${url?` · <a class="vidlink noprint" style="white-space:nowrap" href="${esc(vidHref(d))}" target="_blank" rel="noopener">▶ Video${segLabel(d)?` (${fmtT(d.video_start||0)}–${d.video_end!=null?fmtT(d.video_end):""})`:""}</a>`:""}</div>
       ${it.note?`<div class="tl-note">📌 ${esc(it.note)}</div>`:""}
@@ -2064,12 +2106,15 @@ function showSession(id){
     </div>`; };
   const groups = groupItems(items);
   const joinBtn = (gi) => { const g = groups[gi], prev = groups[gi-1]; if(!prev || isOrg(g.items[0]) || isOrg(prev.items[0]) || !g.items[0].id) return "";
-    return `<button type="button" class="joinbtn noprint" data-join="${g.items[0].id}">⇉ spojit s předchozím – běží zároveň</button>`; };
+    return `<button type="button" class="joinbtn" data-join="${g.items[0].id}">⇉ spojit – běží zároveň</button>`; };
   const mvc = gi => groups.length < 2 ? "" : `<span class="mvc noprint"><button type="button" data-gup="${gi}" aria-label="Posunout výš" ${gi===0?"disabled":""}>▲</button><button type="button" data-gdn="${gi}" aria-label="Posunout níž" ${gi===groups.length-1?"disabled":""}>▼</button></span>`;
-  const rows = groups.map((g, gi) => joinBtn(gi) + `<div class="gwrap" data-g="${gi}">` + (() => {
+  const flat = groups.flatMap(g => g.items);
+  const before = gi => groups.slice(0, gi).reduce((a, g) => a + g.items.length, 0);
+  const gapRow = gi => `<div class="gaprow noprint"><button type="button" class="insbtn" data-insat="${before(gi)}">📋 ＋ pokyn</button>${joinBtn(gi)}</div>`;
+  const rows = groups.map((g, gi) => (gi ? gapRow(gi) : "") + `<div class="gwrap" data-g="${gi}">` + (() => {
     const from = t; t += g.dur; const clock = start!=null ? hhmm(start+from) : `${from}. min`;
     if(g.items.length===1){ const it = g.items[0];
-      if(isOrg(it)) return `<div class="tl-org">${mvc(gi)}<span class="tl-org-ic">📋</span><div class="grow" style="min-width:0"><b>Organizační pokyny</b>${it.title?`<div class="tl-org-t">${esc(it.title)}</div>`:""}</div><span class="tl2-time"><b>${clock}</b><span>${it.duration_min||0}′</span></span></div>`;
+      if(isOrg(it)) return `<div class="tl-org">${mvc(gi)}<span class="tl-org-ic">📋</span><div class="grow" style="min-width:0" ${it.id?`data-orged="${it.id}"`:""}><b>Pokyny</b> <span class="tl-org-ed noprint">✎ upravit</span>${it.title?`<div class="tl-org-t">${esc(it.title)}</div>`:""}</div><span class="tl2-time"><b>${clock}</b><span>${it.duration_min||0}′</span></span></div>`;
       return drillHtml(it, dur => `<b>${clock}</b><span>${dur}′</span>`, mvc(gi)); }
     return `<div class="tl-par"><div class="tl-par-h">${mvc(gi)}<span class="grow">⇉ Souběžně · ${g.items.length} stanoviště</span><span class="tl2-time"><b>${clock}</b><span>${g.dur}′</span></span></div>`
       + `<div class="muted noprint" style="font-size:14px;margin:-2px 0 4px">Blok trvá jako nejdelší cvičení. Délky měníš v Upravit.</div>`
@@ -2118,6 +2163,22 @@ function showSession(id){
     toast(dir < 0 ? "Posunuto výš" : "Posunuto níž"); };
   app.querySelectorAll("[data-gup]").forEach(b => b.onclick = () => moveGroup(+b.dataset.gup, -1, b));
   app.querySelectorAll("[data-gdn]").forEach(b => b.onclick = () => moveGroup(+b.dataset.gdn, +1, b));
+  const reload = async (msg) => { const y = scrollY; await loadSessions(); showSession(s.id); scrollTo(0, y); if(msg) toast(msg); };
+  app.querySelectorAll("[data-insat]").forEach(b => b.onclick = () => orgSheet({ title:"", duration_min:2 }, async (title, dur) => {
+    const k = +b.dataset.insat;
+    const ups = flat.map((x, j) => ({ x, pos: j < k ? j : j + 1 })).filter(o => o.x.id && o.x.position !== o.pos).map(o => sb.from("session_drills").update({ position:o.pos }).eq("id", o.x.id));
+    const res = await Promise.all(ups); const e1 = res.find(r => r.error); if(e1) return fail(e1.error);
+    const { error } = await sb.from("session_drills").insert({ session_id:s.id, kind:"org", title:title||null, drill_id:null, parallel:false, duration_min:dur, position:k });
+    if(error) return fail(error); reload("Pokyn vložen"); }));
+  app.querySelectorAll("[data-orged]").forEach(el => el.onclick = () => { const it = flat.find(x => x.id === el.dataset.orged); if(!it) return;
+    orgSheet(it, async (title, dur) => { const { error } = await sb.from("session_drills").update({ title:title||null, duration_min:dur }).eq("id", it.id); if(error) return fail(error); reload("Pokyn uložen"); },
+      async () => { const { error } = await sb.from("session_drills").delete().eq("id", it.id); if(error) return fail(error); reload("Pokyn odebrán"); }); });
+  app.querySelectorAll("[data-itemed]").forEach(b => b.onclick = e => { e.stopPropagation(); const it = flat.find(x => x.id === b.dataset.itemed); if(!it) return; const d = state.drills.find(x => x.id === it.drill_id);
+    itemSheet(it, d, async (dur, note) => { const { error } = await sb.from("session_drills").update({ duration_min:dur, note:note||null }).eq("id", it.id); if(error) return fail(error); reload("Uloženo"); },
+      async () => { const i = flat.indexOf(it), nx = flat[i+1];
+        if(nx && nx.parallel && !it.parallel){ const { error:e0 } = await sb.from("session_drills").update({ parallel:false }).eq("id", nx.id); if(e0) return fail(e0); }
+        const { error } = await sb.from("session_drills").delete().eq("id", it.id); if(error) return fail(error); reload("Cvičení odebráno z tréninku"); },
+      () => showDrill(it.drill_id)); });
   app.querySelectorAll("[data-join]").forEach(b => b.onclick = () => setPar(b.dataset.join, true, b));
   app.querySelectorAll("[data-split]").forEach(b => b.onclick = () => setPar(b.dataset.split, false, b));
   const on = (act, fn) => app.querySelectorAll(`[data-act="${act}"]`).forEach(b => b.onclick = fn);
@@ -2409,7 +2470,9 @@ const GUIDE = [
       <li>Barevný proužek = minuty podle bloků šablony, čárka = 90 min. <b>rozpis ▾</b> ukáže čísla.</li>
       <li>Každé cvičení má číslo, čas začátku, délku, animaci a odkaz <b>▶ Video</b>.</li>
       <li>Souběžná cvičení jsou v zeleném rámečku jako <b>Stan. 1, Stan. 2…</b>; organizační pokyny v šedém pruhu 📋.</li>
-      <li><b>⇉ spojit s předchozím – běží zároveň</b> (tlačítko mezi dvěma cvičeními) – jedním klepnutím dáš cvičení do stejného času na jiné stanoviště. Uloží se hned.</li>
+      <li><span class="hk">✎</span> u názvu cvičení – úprava délky a poznámky jen pro tento trénink, otevření detailu cvičení nebo odebrání z tréninku.</li>
+      <li><b>📋 ＋ pokyn</b> (mezi cvičeními) – vloží žlutě označené organizační pokyny s vlastním časem. Klepnutím na pokyn ho upravíš nebo odebereš.</li>
+      <li><b>⇉ spojit – běží zároveň</b> (tlačítko mezi dvěma cvičeními) – jedním klepnutím dáš cvičení do stejného času na jiné stanoviště. Uloží se hned.</li>
       <li><b>✂ oddělit – poběží až po předchozím</b> (uvnitř zeleného rámečku) – cvičení zase rozdělí. Časy a konec tréninku se přepočítají.</li>
     </ul>`],
   ["🌐", "Přidat cvičení z webu", `
@@ -2523,7 +2586,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v30", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v31", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
