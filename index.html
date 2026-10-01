@@ -200,6 +200,10 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .vidlink{color:var(--brand);font-weight:700;text-decoration:none}
 .tl-endline{padding:10px 0;border-top:1px solid var(--line);font-weight:700;font-size:16px}
 .totd{margin-top:8px}
+.helpbtn{flex:none;width:36px;height:36px;border-radius:50%;border:2px solid var(--brand);background:var(--card);color:var(--brand);font-weight:800;font-size:18px;line-height:1;cursor:pointer;padding:0;margin-left:8px}
+.sheet h3{margin:14px 0 4px;font-size:17px}
+.hlp{margin:4px 0;padding-left:20px;font-size:16px;line-height:1.45}.hlp li{margin:5px 0}
+.hk{display:inline-block;min-width:26px;text-align:center;padding:1px 6px;border-radius:6px;background:var(--chip);color:var(--brand);font-weight:700}
 .sbar{margin:0 0 10px}
 .appver{position:fixed;right:8px;bottom:4px;font-size:11px;color:var(--muted);opacity:.7;pointer-events:none;z-index:1}
 @media print{.appver{display:none}}
@@ -1860,6 +1864,47 @@ function rankSessions(){
   return [...state.sessions].sort((a,b)=>{ const A=key(a), B=key(b); return A[0]-B[0] || A[1].localeCompare(B[1]) || A[2].localeCompare(B[2]); });
 }
 function statusBadge(s){ return s.status==="ready" ? `<span class="badge ready">✓ Připravený</span>` : `<span class="badge draft">✎ Rozpracovaný</span>`; }
+const HELP = {
+  edit: { title:"Nápověda – úprava tréninku", html:`
+    <h3>Rozvrh tréninku</h3>
+    <ul class="hlp">
+      <li><span class="hk">▲</span> posune cvičení o jedno místo <b>nahoru</b> (dřív v tréninku).</li>
+      <li><span class="hk">▼</span> posune cvičení o jedno místo <b>dolů</b> (později).</li>
+      <li>Šedá šipka znamená, že dál to nejde – cvičení je první nebo poslední.</li>
+      <li><span class="hk">⠿</span> úchyt pro přetažení myší (na počítači).</li>
+      <li><span class="hk">−</span> <span class="hk">+</span> zkrátí nebo prodlouží cvičení o 1 minutu.</li>
+      <li><span class="hk">✕</span> odebere cvičení z tréninku (v zásobníku zůstane).</li>
+      <li><b>＋ organizační pokyn</b> vloží na to místo položku jako „pití, rozdělení do skupin, přesun“ – s vlastním časem, bez typu cvičení.</li>
+      <li>Časy začátků vlevo se počítají ze <b>Začátku</b> tréninku a přepočítají se po každé změně.</li>
+    </ul>
+    <h3>Šablona a zásobník</h3>
+    <ul class="hlp">
+      <li>Šablona ukazuje doporučené rozdělení 90 minut. Klepnutím na její část se zásobník vyfiltruje na vhodné typy.</li>
+      <li><b>Seřadit podle šablony</b> poskládá cvičení podle bloků (organizační pokyny zůstanou u svého cvičení).</li>
+      <li>V zásobníku přidáš cvičení tlačítkem <span class="hk">+</span> – vloží se před závěrečný fotbal.</li>
+    </ul>
+    <p class="muted">Nic se neuloží, dokud neklepneš na <b>Uložit trénink</b>.</p>` },
+  session: { title:"Nápověda – karta tréninku", html:`
+    <ul class="hlp">
+      <li><b>Upravit</b> – otevře úpravu: pořadí (šipky ▲ ▼), délky, organizační pokyny, přidání cvičení.</li>
+      <li><b>Rozbalit vše</b> – ukáže u všech cvičení přípravu, pomůcky a na co dbát.</li>
+      <li><b>Tisk / PDF</b> – vytiskne trénink nebo ho uloží jako PDF.</li>
+      <li><b>Duplikovat</b> – vytvoří kopii tréninku s dnešním datem.</li>
+      <li>Barevný proužek = minuty podle bloků šablony, svislá čárka = 90 min. <b>rozpis ▾</b> ukáže čísla.</li>
+      <li>Klepnutím na animaci se zobrazí ovládání (pauza, rychlost, od začátku).</li>
+      <li><b>▶ Video</b> otevře video; když má cvičení zadaný úsek, začne od něj.</li>
+      <li>Klepnutím na popis cvičení se rozbalí celý text.</li>
+    </ul>` }
+};
+function showHelp(key){
+  const h = HELP[key]; if(!h) return;
+  const bg = document.createElement("div"); bg.className = "sheetbg";
+  bg.innerHTML = `<div class="sheet" role="dialog" aria-label="${esc(h.title)}"><h2>${h.title}</h2>${h.html}<button type="button" class="btn primary" data-close="1" style="width:100%;margin-top:12px">Rozumím</button></div>`;
+  document.body.appendChild(bg);
+  const close = () => bg.remove();
+  bg.onclick = e => { if(e.target===bg || e.target.closest("[data-close]")) close(); };
+}
+const helpBtn = key => `<button type="button" class="helpbtn noprint" data-help="${key}" aria-label="Nápověda" title="Nápověda">?</button>`;
 function pickSession(drillId){
   const d = state.drills.find(x=>x.id===drillId); if(!d) return;
   const today = new Date().toISOString().slice(0,10);
@@ -1956,7 +2001,7 @@ function showSession(id){
       <div class="totline"><b>${t} min</b><span class="muted">z ${TEMPLATE_TOTAL}</span>${diff?`<span class="tplv ${dcls}">${diff>0?"+":"−"}${Math.abs(diff)}</span>`:`<span class="tplv ok">✓</span>`}<span class="grow"></span><span class="totmore">rozpis ▾</span></div></summary>
     <div class="totblk">${TEMPLATE.map(b=>`<span><i style="background:${b.col}"></i>${b.name} <b>${blk[b.k]||0}</b>/${b.min}</span>`).join("")}${blk.jine?`<span><i style="background:#94a3b8"></i>Ostatní <b>${blk.jine}</b></span>`:""}${blk.org?`<span><i style="background:#d6dbe0"></i>Organizace <b>${blk.org}</b></span>`:""}</div></details>`;
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
-  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span><button class="btn danger small" data-act="del">Smazat</button></div>
+  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>
   <div class="card" style="padding:12px 14px">
     <h2 style="margin:0;font-size:20px">${esc(s.title)}</h2>
     <div class="sumline"><b>📅 ${new Date(s.date+"T00:00").toLocaleDateString("cs-CZ",{weekday:"short",day:"numeric",month:"numeric"})}</b>${start!=null?` · ⏱ ${hhmm(start)}–${end}`:""}${kids?` · 👥 ${kids}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div>
@@ -1966,11 +2011,12 @@ function showSession(id){
   <div class="card" style="padding:4px 12px">${rows || `<p class="muted">Trénink zatím nemá žádná cvičení.</p>`}
     <div class="tl-endline">🏁 Konec${end?` ${end}`:""} · ${t} min · ${no} cvičení</div>
   </div>
-  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span><button class="btn danger small" data-act="del">Smazat</button></div>`;
+  <div class="row noprint sbar" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" data-act="edit">Upravit</button><button class="btn small" data-act="expand">Rozbalit vše</button><button class="btn small" data-act="print">Tisk / PDF</button><button class="btn small" data-act="dup">Duplikovat</button><span class="grow"></span>${helpBtn("session")}<button class="btn danger small" data-act="del">Smazat</button></div>`;
   app.querySelectorAll(".tl-desc").forEach(p => p.onclick = () => p.classList.toggle("open"));
   mountThumbs(app);
   app.querySelectorAll("[data-big]").forEach(th => th.onclick = () => { const box = app.querySelector(`[data-bigbox="${th.dataset.big}"]`); th.hidden = true; box.hidden = false; Anim.mount(box, th.dataset.thumb); const c = document.createElement("button"); c.type = "button"; c.className = "btn sm"; c.textContent = "✕ Zavřít ovládání"; c.onclick = () => { box.hidden = true; box.innerHTML = ""; th.hidden = false; }; box.querySelector(".animbar")?.append(c); });
   document.getElementById("back").onclick = () => { state.view=null; render(); };
+  app.querySelectorAll("[data-help]").forEach(b => b.onclick = () => showHelp(b.dataset.help));
   const on = (act, fn) => app.querySelectorAll(`[data-act="${act}"]`).forEach(b => b.onclick = fn);
   on("edit", () => editSession(s));
   on("expand", () => { const all = app.querySelectorAll("details.tl-more"); const open = ![...all].every(d=>d.open); all.forEach(d=>d.open=open); app.querySelectorAll('[data-act="expand"]').forEach(b => b.textContent = open ? "Sbalit vše" : "Rozbalit vše"); });
@@ -2010,7 +2056,7 @@ function editSession(s={}){
       <div class="row"><strong class="grow">Doporučená šablona (${TEMPLATE_TOTAL} min)</strong><button type="button" class="linkbtn" id="sortTpl">Seřadit podle šablony</button></div>
       <div id="tpl" class="tpl"></div>
       <p class="muted" style="margin:2px 0 12px">Klepnutím na část šablony se zásobník vyfiltruje na vhodné typy cvičení.</p>
-      <div class="row"><strong class="grow">Rozvrh tréninku</strong><span class="muted" id="tot"></span></div>
+      <div class="row"><strong class="grow">Rozvrh tréninku</strong><span class="muted" id="tot"></span>${helpBtn("edit")}</div>
       <p class="muted" style="margin:2px 0 8px">Přetáhni cvičení za úchyt ⠿ ze zásobníku sem, nebo klepni na +. Pořadí měníš šipkami ▲ ▼ (nebo přetažením za ⠿), délku tlačítky − / +.</p>
       <div id="plan" class="plan"></div>
     </div>
@@ -2163,6 +2209,7 @@ function editSession(s={}){
     else addDrill(payload.id, index);
   }
 
+  app.querySelectorAll("[data-help]").forEach(b => b.onclick = () => showHelp(b.dataset.help));
   document.getElementById("pq").oninput = e => { pickQ = e.target.value; drawPool(); };
   form.start_time.oninput = totals; form.coaches.oninput = totals; form.players_expected.oninput = totals;
   drawPlan(); drawPool();
@@ -2267,7 +2314,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v23", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v24", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
