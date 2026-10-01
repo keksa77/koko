@@ -200,6 +200,14 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .vidlink{color:var(--brand);font-weight:700;text-decoration:none}
 .tl-endline{padding:10px 0;border-top:1px solid var(--line);font-weight:700;font-size:16px}
 .totd{margin-top:8px}
+.appver{position:fixed;right:8px;bottom:4px;font-size:11px;color:var(--muted);opacity:.7;pointer-events:none;z-index:1}
+@media print{.appver{display:none}}
+.insorg{display:block;width:100%;border:1px dashed var(--line);background:none;color:var(--muted);font-size:13px;padding:3px 0;margin:2px 0;border-radius:8px;cursor:pointer}
+.insorg:hover,.insorg:active{color:var(--brand);border-color:var(--brand)}
+.pi.org{background:var(--chip);border-radius:10px;padding-left:4px}
+.pi.org .pn{font-size:15px;color:var(--muted)}
+.tl-org{display:flex;align-items:center;gap:10px;margin:6px 0;padding:8px 10px;border-radius:10px;background:var(--chip);font-size:16px}
+.tl-org-ic{font-size:20px}.tl-org-t{white-space:pre-wrap;color:var(--ink)}
 .mv{flex:none;display:flex;flex-direction:column;gap:4px}
 .mv button{width:40px;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--chip);color:var(--brand);font-size:16px;line-height:1;cursor:pointer;padding:0}
 .mv button:active{background:var(--sel)}.mv button:disabled{opacity:.3;cursor:default}
@@ -251,6 +259,7 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
   <button data-tab="settings" style="flex:0 0 auto;padding:12px 16px" aria-label="Nastavení">⚙</button>
 </nav>
 <div id="notices"></div>
+<div id="appver" class="appver"></div>
 <main id="app"><p class="muted">Načítám…</p></main>
 <button class="fab" id="fab" hidden aria-label="Přidat">+</button>
 <dialog id="pickDlg"><div class="dhead"><strong class="grow">Přidat cvičení do tréninku</strong><button class="btn small" id="pickClose">Hotovo</button></div><div class="dbody"><input type="search" id="pickSearch" placeholder="Hledat…"><div id="pickList"></div></div></dialog>
@@ -1651,7 +1660,7 @@ function renderAdd(){
   app.querySelectorAll("[data-sdel]").forEach(b => b.onclick = async () => { if(!confirm("Smazat tento odkaz?")) return; const { error } = await sb.from("drill_submissions").delete().eq("id", b.dataset.sdel); if(error) return fail(error); await loadSubmissions(); renderAdd(); });
 }
 async function loadSessions(){
-  const { data, error } = await sb.from("sessions").select("*, session_drills(id, drill_id, position, duration_min, note)").order("date",{ascending:false});
+  const { data, error } = await sb.from("sessions").select("*, session_drills(id, drill_id, position, duration_min, note, kind, title)").order("date",{ascending:false});
   if(error) throw error; state.sessions = data;
 }
 
@@ -1858,7 +1867,7 @@ function pickSession(drillId){
   const opt = (x,i) => { const dt = new Date(x.date+"T00:00"); const has = (x.session_drills||[]).some(sd=>sd.drill_id===drillId);
     return `<button type="button" class="sopt ${i===0?"rec":""}" data-sid="${x.id}"><div class="sdate"><span>${dt.toLocaleDateString("cs-CZ",{weekday:"short"})}</span><b>${dt.getDate()}.</b><span>${dt.toLocaleDateString("cs-CZ",{month:"short"})}</span></div>
       <div class="grow"><div style="font-weight:700">${esc(x.title)}${i===0?`<span class="badge rec">Doporučeno</span>`:""}</div>
-      <div class="muted">${statusBadge(x)} · ${(x.session_drills||[]).length} cvičení · ${sessionTotal(x)} min${has?" · už obsahuje":""}</div></div></button>`; };
+      <div class="muted">${statusBadge(x)} · ${drillCount(x)} cvičení · ${sessionTotal(x)} min${has?" · už obsahuje":""}</div></div></button>`; };
   bg.innerHTML = `<div class="sheet" role="dialog" aria-label="Přidat do tréninku"><h2>Přidat do tréninku</h2><div class="muted">${esc(d.name)} · ${d.duration_min||10} min</div>
     ${shown.map(opt).join("") || `<p class="muted" style="margin-top:12px">Zatím nemáš žádný rozpracovaný ani nadcházející trénink.</p>`}
     <button type="button" class="btn bigadd" data-new="1" style="margin-top:14px">＋ Nový trénink s tímto cvičením</button>
@@ -1880,6 +1889,8 @@ function pickSession(drillId){
     if(state.view?.type==="drill") showDrill(drillId);
   });
 }
+const isOrg = x => x && x.kind==="org";
+const drillCount = s => (s.session_drills||[]).filter(x=>!isOrg(x)).length;
 function sessionTotal(s){ return (s.session_drills||[]).reduce((a,x)=>a+(x.duration_min||0),0); }
 function sessionTimes(s){
   const start = toMin(s.start_time);
@@ -1893,7 +1904,7 @@ function renderSessions(){
     return `<div class="card ${isPast?"past":""}" data-sopen="${s.id}" style="cursor:pointer"><div class="row" style="align-items:flex-start">
       <div class="sdate"><span>${d.toLocaleDateString("cs-CZ",{weekday:"short"})}</span><b>${d.getDate()}.</b><span>${d.toLocaleDateString("cs-CZ",{month:"short"})}</span></div>
       <div class="grow"><p class="drill-title">${esc(s.title)} ${statusBadge(s)}</p>
-      <div class="muted">${s.start_time?sessionTimes(s)+" · ":""}${(s.session_drills||[]).length} cvičení · ${sessionTotal(s)} min${s.players_expected?` · 👥 ${s.players_expected}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div></div></div></div>`; };
+      <div class="muted">${s.start_time?sessionTimes(s)+" · ":""}${drillCount(s)} cvičení · ${sessionTotal(s)} min${s.players_expected?` · 👥 ${s.players_expected}`:""}${s.coaches?` · 🧑‍🏫 ${s.coaches}`:""}</div></div></div></div>`; };
   app.innerHTML = state.sessions.length
     ? (upcoming.length?`<h3 class="muted" style="margin:0 0 8px">Nadcházející</h3>${upcoming.map(s=>card(s,false)).join("")}`:`<div class="empty">Žádný nadcházející trénink. Tlačítkem + ho poskládáš.</div>`)
       + (past.length?`<h3 class="muted" style="margin:18px 0 8px">Proběhlé</h3>${past.map(s=>card(s,true)).join("")}`:"")
@@ -1906,9 +1917,12 @@ function showSession(id){
   const items = [...(s.session_drills||[])].sort((a,b)=>a.position-b.position);
   const start = toMin(s.start_time);
   const kids = s.players_expected;
-  let t = 0;
-  const rows = items.map((it,i)=>{ const d = state.drills.find(x=>x.id===it.drill_id); if(!d) return "";
-    const from=t, dur=it.duration_min||0; t+=dur;
+  let t = 0, no = 0;
+  const rows = items.map((it,i)=>{
+    if(isOrg(it)){ const from=t, dur=it.duration_min||0; t+=dur; const clock = start!=null ? hhmm(start+from) : `${from}. min`;
+      return `<div class="tl-org"><span class="tl-org-ic">📋</span><div class="grow" style="min-width:0"><b>Organizační pokyny</b>${it.title?`<div class="tl-org-t">${esc(it.title)}</div>`:""}</div><span class="tl2-time"><b>${clock}</b><span>${dur}′</span></span></div>`; }
+    const d = state.drills.find(x=>x.id===it.drill_id); if(!d) return "";
+    const from=t, dur=it.duration_min||0; t+=dur; no++;
     const clock = start!=null ? hhmm(start+from) : `${from}. min`;
     const url = safeUrl(d.video_url);
     const pl = players(d);
@@ -1923,7 +1937,7 @@ function showSession(id){
     ].filter(Boolean).join("");
     const bk = blockOf(d);
     return `<div class="tl2">
-      <div class="tl2-head"><span class="tl2-no" style="background:${bk?bk.col:"#94a3b8"}">${i+1}</span><p class="drill-title grow">${esc(d.name)}</p><span class="tl2-time"><b>${clock}</b><span>${dur}′</span></span></div>
+      <div class="tl2-head"><span class="tl2-no" style="background:${bk?bk.col:"#94a3b8"}">${no}</span><p class="drill-title grow">${esc(d.name)}</p><span class="tl2-time"><b>${clock}</b><span>${dur}′</span></span></div>
       ${Anim.has(d.name)?`<div class="tl2-anim noprint" data-thumb="${esc(d.name)}" data-lbl data-big="${i}" title="Klepnutím ovládání animace"></div><div class="tl-big noprint" data-bigbox="${i}" hidden></div>`:""}
       <div class="tl-meta">${CATS[d.category]}${pl?` · <span${kidsWarn?' class="warn"':""}>👥 ${esc(pl)}</span>`:""}${d.coaches_needed?` · <span${coachWarn?' class="warn"':""}>🧑‍🏫 ${d.coaches_needed}</span>`:""}${url?` · <a class="vidlink noprint" style="white-space:nowrap" href="${esc(vidHref(d))}" target="_blank" rel="noopener">▶ Video${segLabel(d)?` (${fmtT(d.video_start||0)}–${d.video_end!=null?fmtT(d.video_end):""})`:""}</a>`:""}</div>
       ${it.note?`<div class="tl-note">📌 ${esc(it.note)}</div>`:""}
@@ -1932,14 +1946,14 @@ function showSession(id){
       ${url?`<div class="print-only tl-url">Video: ${esc(url)}</div>`:""}
     </div>`; }).join("");
   const end = start!=null ? hhmm(start+t) : null;
-  const blk = {}; items.forEach(it => { const b = blockOf(state.drills.find(x=>x.id===it.drill_id)); const k = b ? b.k : "jine"; blk[k] = (blk[k]||0) + (it.duration_min||0); });
+  const blk = {}; items.forEach(it => { const b = isOrg(it) ? null : blockOf(state.drills.find(x=>x.id===it.drill_id)); const k = isOrg(it) ? "org" : b ? b.k : "jine"; blk[k] = (blk[k]||0) + (it.duration_min||0); });
   const diff = t - TEMPLATE_TOTAL, scale = Math.max(t, TEMPLATE_TOTAL) || 1;
-  const segs = items.map(it => { const d = state.drills.find(x=>x.id===it.drill_id); const b = blockOf(d); return `<i style="width:${(it.duration_min||0)/scale*100}%;background:${b?b.col:"#94a3b8"}"></i>`; }).join("");
+  const segs = items.map(it => { const b = isOrg(it) ? null : blockOf(state.drills.find(x=>x.id===it.drill_id)); return `<i style="width:${(it.duration_min||0)/scale*100}%;background:${isOrg(it)?"#d6dbe0":b?b.col:"#94a3b8"}"></i>`; }).join("");
   const dcls = Math.abs(diff)<=5 ? "ok" : diff<0 ? "under" : "over";
   const totalBox = `<details class="totd"><summary>
       <div class="totbar">${segs}<u style="left:${TEMPLATE_TOTAL/scale*100}%"></u></div>
       <div class="totline"><b>${t} min</b><span class="muted">z ${TEMPLATE_TOTAL}</span>${diff?`<span class="tplv ${dcls}">${diff>0?"+":"−"}${Math.abs(diff)}</span>`:`<span class="tplv ok">✓</span>`}<span class="grow"></span><span class="totmore">rozpis ▾</span></div></summary>
-    <div class="totblk">${TEMPLATE.map(b=>`<span><i style="background:${b.col}"></i>${b.name} <b>${blk[b.k]||0}</b>/${b.min}</span>`).join("")}${blk.jine?`<span><i style="background:#94a3b8"></i>Ostatní <b>${blk.jine}</b></span>`:""}</div></details>`;
+    <div class="totblk">${TEMPLATE.map(b=>`<span><i style="background:${b.col}"></i>${b.name} <b>${blk[b.k]||0}</b>/${b.min}</span>`).join("")}${blk.jine?`<span><i style="background:#94a3b8"></i>Ostatní <b>${blk.jine}</b></span>`:""}${blk.org?`<span><i style="background:#d6dbe0"></i>Organizace <b>${blk.org}</b></span>`:""}</div></details>`;
   app.innerHTML = `<button class="back noprint" id="back">‹ Zpět</button>
   <div class="card" style="padding:12px 14px">
     <h2 style="margin:0;font-size:20px">${esc(s.title)}</h2>
@@ -1948,7 +1962,7 @@ function showSession(id){
     ${totalBox}
   </div>
   <div class="card" style="padding:4px 12px">${rows || `<p class="muted">Trénink zatím nemá žádná cvičení.</p>`}
-    <div class="tl-endline">🏁 Konec${end?` ${end}`:""} · ${t} min · ${items.length} cvičení</div>
+    <div class="tl-endline">🏁 Konec${end?` ${end}`:""} · ${t} min · ${no} cvičení</div>
   </div>
   <div class="row noprint" style="flex-wrap:wrap;gap:6px"><button class="btn primary small" id="edit">Upravit</button><button class="btn small" id="expand">Rozbalit vše</button><button class="btn small" id="print">Tisk / PDF</button><button class="btn small" id="dup">Duplikovat</button><span class="grow"></span><button class="btn danger small" id="del">Smazat</button></div>`;
   app.querySelectorAll(".tl-desc").forEach(p => p.onclick = () => p.classList.toggle("open"));
@@ -1969,7 +1983,7 @@ function showSession(id){
 }
 function editSession(s={}){
   state.view = { type:"editSession" }; fab.hidden = true;
-  const items = [...(s.session_drills||[])].sort((a,b)=>a.position-b.position).map(x=>({ drill_id:x.drill_id, duration_min:x.duration_min||10, note:x.note||"" }));
+  const items = [...(s.session_drills||[])].sort((a,b)=>a.position-b.position).map(x=>({ kind:x.kind||"drill", title:x.title||"", drill_id:x.drill_id, duration_min:x.duration_min||(isOrg(x)?2:10), note:x.note||"" }));
   const FD = fotbalDrill();
   if(!s.id && FD && !items.some(x=>x.drill_id===FD.id)) items.push({ drill_id:FD.id, duration_min:20, note:"" });
   const endPos = () => items.length && FD && items[items.length-1].drill_id===FD.id ? items.length-1 : items.length;
@@ -2010,21 +2024,21 @@ function editSession(s={}){
   const findD = id => state.drills.find(x=>x.id===id);
 
   function drawTpl(){
-    const act = {}; items.forEach(it => { const b = blockOf(findD(it.drill_id)); const k = b ? b.k : "jine"; act[k] = (act[k]||0) + (Number(it.duration_min)||0); });
+    const act = {}; items.forEach(it => { const b = isOrg(it) ? null : blockOf(findD(it.drill_id)); const k = isOrg(it) ? "org" : b ? b.k : "jine"; act[k] = (act[k]||0) + (Number(it.duration_min)||0); });
     let t0 = 0;
     const st = toMin(form.start_time.value);
     document.getElementById("tpl").innerHTML = `<div class="tplbar">${TEMPLATE.map(b=>`<div style="flex:${b.min};background:${b.col}"></div>`).join("")}</div>` + TEMPLATE.map(b => {
       const a = act[b.k]||0, diff = a - b.min, from = t0; t0 += b.min;
       const cls = Math.abs(diff) <= 3 ? "ok" : diff < 0 ? "under" : "over";
       return `<button type="button" class="tplrow" data-blk="${b.k}"><span class="dot" style="background:${b.col}"></span><span class="grow"><b>${b.name}</b><br><span class="muted">${st!=null?`${hhmm(st+from)}–${hhmm(st+from+b.min)}`:`${from}.–${from+b.min}. min`}</span></span><span class="tplv ${cls}">${a} / ${b.min} min</span></button>`;
-    }).join("") + (act.jine ? `<div class="muted" style="margin-top:4px">Ostatní: ${act.jine} min</div>` : "");
+    }).join("") + (act.jine ? `<div class="muted" style="margin-top:4px">Ostatní: ${act.jine} min</div>` : "") + (act.org ? `<div class="muted" style="margin-top:4px">📋 Organizační pokyny: ${act.org} min</div>` : "");
     document.querySelectorAll("[data-blk]").forEach(el => el.onclick = () => { const b = TEMPLATE.find(x=>x.k===el.dataset.blk); if(b.fotbal){ if(FD && !items.some(x=>x.drill_id===FD.id)){ items.push({ drill_id:FD.id, duration_min:20, note:"" }); drawPlan(); drawPool(); } return; } pickCats.clear(); b.cats.forEach(c=>pickCats.add(c)); drawPool(); document.getElementById("pq").scrollIntoView({ behavior:"smooth", block:"center" }); });
   }
   function totals(){
     drawTpl();
     const sum = items.reduce((a,x)=>a+(Number(x.duration_min)||0),0);
     const st = toMin(form.start_time.value);
-    const txt = `${items.length} cvičení · ${sum} min${st!=null?` · ${hhmm(st)}–${hhmm(st+sum)}`:""}`;
+    const txt = `${items.filter(x=>!isOrg(x)).length} cvičení · ${sum} min${st!=null?` · ${hhmm(st)}–${hhmm(st+sum)}`:""}`;
     document.getElementById("tot").textContent = txt;
     document.getElementById("tot2").textContent = txt;
     let acc = 0;
@@ -2038,9 +2052,23 @@ function editSession(s={}){
     });
   }
   function drawPlan(){
-    plan.innerHTML = items.length ? items.map((it,i)=>{ const d=findD(it.drill_id);
+    const ins = i => `<button type="button" class="insorg" data-ins="${i}">＋ organizační pokyn</button>`;
+    const mvb = i => `<div class="mv"><button type="button" data-up="${i}" aria-label="Posunout výš" ${i===0?"disabled":""}>▲</button><button type="button" data-down="${i}" aria-label="Posunout níž" ${i===items.length-1?"disabled":""}>▼</button></div>`;
+    plan.innerHTML = items.length ? ins(0) + items.map((it,i)=>{ const d=findD(it.drill_id);
+      if(isOrg(it)) return `<div class="pi org" data-i="${i}">
+        ${mvb(i)}
+        <span class="handle" data-h="plan" aria-label="Přesunout">⠿</span>
+        <span class="pt"></span>
+        <div class="grow" style="min-width:0">
+          <div class="pn">📋 Organizační pokyny</div>
+          <div class="pw"></div>
+          <input class="pnote" data-otitle="${i}" placeholder="např. pití, rozdělení do skupin, přesun…" value="${esc(it.title)}">
+        </div>
+        <div class="dur"><button type="button" data-dm="${i}">−</button><b>${it.duration_min}</b><small>min</small><button type="button" data-dp="${i}">+</button></div>
+        <button type="button" class="x" data-rm="${i}" aria-label="Odebrat">✕</button>
+      </div>` + ins(i+1);
       return `<div class="pi" data-i="${i}">
-        <div class="mv"><button type="button" data-up="${i}" aria-label="Posunout výš" ${i===0?"disabled":""}>▲</button><button type="button" data-down="${i}" aria-label="Posunout níž" ${i===items.length-1?"disabled":""}>▼</button></div>
+        ${mvb(i)}
         <span class="handle" data-h="plan" aria-label="Přesunout">⠿</span>
         <span class="pt"></span>
         ${d && Anim.has(d.name)?`<div class="thumb pthumb" data-thumb="${esc(d.name)}"></div>`:""}
@@ -2052,7 +2080,7 @@ function editSession(s={}){
         </div>
         <div class="dur"><button type="button" data-dm="${i}">−</button><b>${it.duration_min}</b><small>min</small><button type="button" data-dp="${i}">+</button></div>
         <button type="button" class="x" data-rm="${i}" aria-label="Odebrat">✕</button>
-      </div>`; }).join("")
+      </div>` + ins(i+1); }).join("")
       : `<div class="dropempty">Sem přetáhni cvičení ze zásobníku</div>`;
     plan.querySelectorAll("[data-dm]").forEach(b => b.onclick = () => { const it=items[b.dataset.dm]; it.duration_min=Math.max(1,(it.duration_min||0)-1); drawPlan(); });
     plan.querySelectorAll("[data-dp]").forEach(b => b.onclick = () => { const it=items[b.dataset.dp]; it.duration_min=Math.min(90,(it.duration_min||0)+1); drawPlan(); });
@@ -2062,6 +2090,8 @@ function editSession(s={}){
     plan.querySelectorAll("[data-down]").forEach(b => b.onclick = () => move(+b.dataset.down, +b.dataset.down + 1));
     plan.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { items.splice(+b.dataset.rm,1); drawPlan(); drawPool(); });
     plan.querySelectorAll("[data-note]").forEach(inp => inp.oninput = () => { items[inp.dataset.note].note = inp.value; });
+    plan.querySelectorAll("[data-otitle]").forEach(inp => inp.oninput = () => { items[inp.dataset.otitle].title = inp.value; });
+    plan.querySelectorAll("[data-ins]").forEach(b => b.onclick = () => { const at = +b.dataset.ins; items.splice(at,0,{ kind:"org", title:"", drill_id:null, duration_min:2, note:"" }); drawPlan(); const inp = plan.querySelector(`[data-otitle="${at}"]`); inp?.focus(); });
     mountThumbs(plan);
     plan.querySelectorAll('[data-h="plan"]').forEach(h => h.onpointerdown = e => startDrag(e, { type:"plan", index:+h.closest(".pi").dataset.i }, h.closest(".pi")));
     totals();
@@ -2134,7 +2164,9 @@ function editSession(s={}){
   document.getElementById("pq").oninput = e => { pickQ = e.target.value; drawPool(); };
   form.start_time.oninput = totals; form.coaches.oninput = totals; form.players_expected.oninput = totals;
   drawPlan(); drawPool();
-  document.getElementById("sortTpl").onclick = () => { const ord = it => { const b = blockOf(findD(it.drill_id)); return b ? TEMPLATE.indexOf(b) : 3.5; }; items.sort((a,b)=>ord(a)-ord(b)); drawPlan(); drawPool(); toast("Seřazeno podle šablony"); };
+  document.getElementById("sortTpl").onclick = () => { const ordD = it => { const b = blockOf(findD(it.drill_id)); return b ? TEMPLATE.indexOf(b) : 3.5; };
+    let lastK = -1; const keyed = items.map((it,i) => { const k = isOrg(it) ? (lastK<0 ? -1 : lastK) : (lastK = ordD(it)); return { it, k, i }; });
+    keyed.sort((a,b)=>a.k-b.k || a.i-b.i); items.splice(0, items.length, ...keyed.map(x=>x.it)); drawPlan(); drawPool(); toast("Seřazeno podle šablony"); };
   document.getElementById("back").onclick = () => s.id ? showSession(s.id) : (state.view=null, render());
   form.onsubmit = async e => {
     e.preventDefault();
@@ -2148,7 +2180,7 @@ function editSession(s={}){
       if(id){ const { error } = await sb.from("sessions").update(fd).eq("id", id); if(error) throw error;
         const { error: e2 } = await sb.from("session_drills").delete().eq("session_id", id); if(e2) throw e2; }
       else { const { data, error } = await sb.from("sessions").insert(fd).select().single(); if(error) throw error; id = data.id; }
-      if(items.length){ const { error } = await sb.from("session_drills").insert(items.map((x,i)=>({ session_id:id, drill_id:x.drill_id, duration_min:x.duration_min||null, note:x.note||null, position:i }))); if(error) throw error; }
+      if(items.length){ const { error } = await sb.from("session_drills").insert(items.map((x,i)=>({ session_id:id, kind:isOrg(x)?"org":"drill", title:isOrg(x)?(x.title||null):null, drill_id:isOrg(x)?null:x.drill_id, duration_min:x.duration_min||null, note:x.note||null, position:i }))); if(error) throw error; }
       await loadSessions(); toast("Trénink uložen"); showSession(id);
     }catch(err){ fail(err); btn.disabled = false; }
   };
@@ -2172,7 +2204,7 @@ function renderSettings(first=false){
     <div class="muted">${ageSort([...cur]).map(a=>`${a} – ${AGE_INFO[a]}`).join("<br>")}</div>
     ${first?`<button class="btn primary" id="goOn" style="margin-top:14px;width:100%" ${cur.size?"":"disabled"}>Pokračovat</button>`:""}
     <p class="muted" style="margin-top:12px">V seznamu cvičení i v zásobníku to lze kdykoli dočasně změnit rozbalovacím filtrem „Kategorie“.</p>
-    ${first?"":`<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:12px" class="muted">Přihlášen: ${esc(state.user.email)}</div>`}
+    ${first?"":`<div style="border-top:1px solid var(--line);margin-top:18px;padding-top:12px" class="muted">Přihlášen: ${esc(state.user.email)}<br>Verze aplikace: <b>${APP_VERSION}</b> (${APP_DATE})</div>`}
   </div>
   ${!first && state.isAdmin ? `<div class="card" id="invCard"><h2 style="margin-top:0">Pozvánky trenérů</h2>
     <p class="muted" style="margin-top:0">Registrace je jen na pozvánku.</p>
@@ -2233,8 +2265,10 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
+const APP_VERSION = "v22", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
+  const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
   if(!state.user) return renderAuth(inviteEmail() ? "signup" : "login");
   document.getElementById("tabs").hidden = false; document.getElementById("logoutBtn").hidden = false;
   setTitle();
