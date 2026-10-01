@@ -237,6 +237,12 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .pi.org .pn{font-size:15px;color:var(--muted)}
 .tl-org{display:flex;align-items:center;gap:10px;margin:8px 0;padding:10px 12px;border-radius:10px;background:var(--orgbg);border-left:5px solid var(--orgbd);font-size:16px}
 .tl-org [data-orged]{cursor:pointer}.tl-org-ed{font-size:13px;color:var(--orgtx);font-weight:600;margin-left:4px}
+.orgbar{display:flex;align-items:center;gap:10px;margin:10px -2px;padding:7px 12px;border-radius:8px;background:var(--orgbg);border-top:2px solid var(--orgbd);border-bottom:2px solid var(--orgbd);color:var(--orgtx);font-weight:700;font-size:15px;cursor:pointer}
+.orgbar-t{flex:1;min-width:0;white-space:pre-wrap}.orgbar-m{font-size:13px;font-weight:600;opacity:.85;white-space:nowrap}.orgbar-ed{opacity:.7}
+.orgedit{margin:10px 0;padding:8px;border-radius:8px;background:var(--orgbg);border:2px solid var(--orgbd)}
+.orgin{width:100%;font:600 16px var(--f-body,inherit);padding:8px 10px;border:1px solid var(--orgbd);border-radius:8px;background:var(--card);color:var(--ink)}
+.orgacts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+@media print{.orgbar{border-color:#999;background:#f3f3f3;color:#000}}
 .gaprow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:4px 0}
 .insbtn{border:1px dashed var(--orgbd);background:var(--card);color:var(--orgtx);border-radius:999px;padding:5px 14px;font-size:14px;cursor:pointer;font-weight:600}
 .gaprow .joinbtn{margin:0}
@@ -2116,7 +2122,7 @@ function showSession(id){
   const rows = groups.map((g, gi) => (gi ? gapRow(gi) : "") + `<div class="gwrap" data-g="${gi}">` + (() => {
     const from = t; t += g.dur; const clock = start!=null ? hhmm(start+from) : `${from}. min`;
     if(g.items.length===1){ const it = g.items[0];
-      if(isOrg(it)) return `<div class="tl-org">${mvc(gi)}<span class="tl-org-ic">📋</span><div class="grow" style="min-width:0" ${it.id?`data-orged="${it.id}"`:""}><b>Pokyn</b> <span class="tl-org-ed noprint">✎ upravit</span>${it.title?`<div class="tl-org-t">${esc(it.title)}</div>`:""}</div>${it.duration_min?`<span class="tl2-time"><b>${clock}</b><span>${it.duration_min}′</span></span>`:""}</div>`;
+      if(isOrg(it)) return `<div class="orgbar" ${it.id?`data-orged="${it.id}" role="button" tabindex="0" title="Klepnutím upravíš"`:""}><span class="orgbar-t">📋 ${esc(it.title || "Pokyn")}</span>${it.duration_min?`<span class="orgbar-m">${clock} · ${it.duration_min}′</span>`:""}<span class="orgbar-ed noprint">✎</span></div>`;
       return drillHtml(it, dur => `<b>${clock}</b><span>${dur}′</span>`, mvc(gi)); }
     return `<div class="tl-par"><div class="tl-par-h">${mvc(gi)}<span class="grow">⇉ Souběžně · ${g.items.length} stanoviště</span><span class="tl2-time"><b>${clock}</b><span>${g.dur}′</span></span></div>`
       + `<div class="muted noprint" style="font-size:14px;margin:-2px 0 4px">Blok trvá jako nejdelší cvičení. Délky měníš v Upravit.</div>`
@@ -2166,14 +2172,25 @@ function showSession(id){
   app.querySelectorAll("[data-gup]").forEach(b => b.onclick = () => moveGroup(+b.dataset.gup, -1, b));
   app.querySelectorAll("[data-gdn]").forEach(b => b.onclick = () => moveGroup(+b.dataset.gdn, +1, b));
   const reload = async (msg) => { const y = scrollY; await loadSessions(); showSession(s.id); scrollTo(0, y); if(msg) toast(msg); };
-  app.querySelectorAll("[data-insat]").forEach(b => b.onclick = () => orgSheet({ title:"", duration_min:0 }, async (title, dur) => {
+  const inlineOrg = (host, initial, onSave, onDelete) => {
+    const box = document.createElement("div"); box.className = "orgedit";
+    box.innerHTML = `<input type="text" class="orgin" maxlength="200" placeholder="Pokyn – např. pití, rozdělení do skupin, přesun…" value="${esc(initial||"")}">
+      <div class="orgacts"><button type="button" class="btn primary small" data-o="save">Uložit</button>${onDelete?`<button type="button" class="btn danger small" data-o="del">Odebrat</button>`:""}<button type="button" class="btn small" data-o="cancel">Zrušit</button></div>`;
+    host.replaceWith(box); const inp = box.querySelector("input"); inp.focus();
+    const done = async () => { const v = inp.value.trim(); if(!v){ if(onDelete) return onDelete(); return showSession(s.id); } box.querySelectorAll("button").forEach(x=>x.disabled=true); await onSave(v); };
+    inp.onkeydown = e => { if(e.key==="Enter"){ e.preventDefault(); done(); } else if(e.key==="Escape") showSession(s.id); };
+    box.querySelector('[data-o="save"]').onclick = done;
+    box.querySelector('[data-o="cancel"]').onclick = () => { const y = scrollY; showSession(s.id); scrollTo(0, y); };
+    const del = box.querySelector('[data-o="del"]'); if(del) del.onclick = () => { box.querySelectorAll("button").forEach(x=>x.disabled=true); onDelete(); };
+  };
+  app.querySelectorAll("[data-insat]").forEach(b => b.onclick = () => inlineOrg(b.closest(".gaprow"), "", async (title) => { const dur = 0;
     const k = +b.dataset.insat;
     const ups = flat.map((x, j) => ({ x, pos: j < k ? j : j + 1 })).filter(o => o.x.id && o.x.position !== o.pos).map(o => sb.from("session_drills").update({ position:o.pos }).eq("id", o.x.id));
     const res = await Promise.all(ups); const e1 = res.find(r => r.error); if(e1) return fail(e1.error);
     const { error } = await sb.from("session_drills").insert({ session_id:s.id, kind:"org", title:title||null, drill_id:null, parallel:false, duration_min:dur||null, position:k });
-    if(error) return fail(error); reload("Pokyn vložen"); }));
+    if(error) return fail(error); reload("Pokyn vložen"); }, null));
   app.querySelectorAll("[data-orged]").forEach(el => el.onclick = () => { const it = flat.find(x => x.id === el.dataset.orged); if(!it) return;
-    orgSheet(it, async (title, dur) => { const { error } = await sb.from("session_drills").update({ title:title||null, duration_min:dur||null }).eq("id", it.id); if(error) return fail(error); reload("Pokyn uložen"); },
+    inlineOrg(el, it.title || "", async (title) => { const { error } = await sb.from("session_drills").update({ title }).eq("id", it.id); if(error) return fail(error); reload("Pokyn uložen"); },
       async () => { const { error } = await sb.from("session_drills").delete().eq("id", it.id); if(error) return fail(error); reload("Pokyn odebrán"); }); });
   app.querySelectorAll("[data-itemed]").forEach(b => b.onclick = e => { e.stopPropagation(); const it = flat.find(x => x.id === b.dataset.itemed); if(!it) return; const d = state.drills.find(x => x.id === it.drill_id);
     itemSheet(it, d, async (dur, note) => { const { error } = await sb.from("session_drills").update({ duration_min:dur, note:note||null }).eq("id", it.id); if(error) return fail(error); reload("Uloženo"); },
@@ -2588,7 +2605,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v33", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v34", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
