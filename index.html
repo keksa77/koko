@@ -293,8 +293,8 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
   <button id="logoutBtn" hidden>Odhlásit</button>
 </header>
 <nav class="tabs" id="tabs" hidden>
-  <button data-tab="drills" class="on">Cvičení</button>
-  <button data-tab="sessions">Tréninky</button>
+  <button data-tab="sessions" class="on">Tréninky</button>
+  <button data-tab="drills">Cvičení</button>
   <button data-tab="add" class="tab2">＋ Přidat<br>cvičení</button>
   <button data-tab="guide" style="flex:0 0 auto;padding:12px 10px" aria-label="Návod" hidden>📖</button>
   <button data-tab="settings" style="flex:0 0 auto;padding:12px 16px" aria-label="Nastavení">⚙</button>
@@ -1614,7 +1614,7 @@ const ageRange = arr => { const a = ageSort(arr); return a.length ? (a.length>1 
 
 
 
-const state = { user:null, profile:null, showAllAges:false, ages:null, openDD:null, ddRerender:null, tab:"drills", drills:[], sessions:[], cats:new Set(), q:"", mark:"", onlyCz:false, view:null };
+const state = { user:null, profile:null, showAllAges:false, ages:null, openDD:null, ddRerender:null, tab:"sessions", drills:[], sessions:[], cats:new Set(), q:"", mark:"", onlyCz:false, view:null };
 const app = document.getElementById("app");
 const fab = document.getElementById("fab");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -2177,7 +2177,7 @@ function showSession(id){
     box.innerHTML = `<input type="text" class="orgin" maxlength="200" placeholder="Pokyn – např. pití, rozdělení do skupin, přesun…" value="${esc(initial||"")}">
       <div class="orgacts"><button type="button" class="btn primary small" data-o="save">Uložit</button>${onDelete?`<button type="button" class="btn danger small" data-o="del">Odebrat</button>`:""}<button type="button" class="btn small" data-o="cancel">Zrušit</button></div>`;
     host.replaceWith(box); const inp = box.querySelector("input"); inp.focus();
-    const done = async () => { const v = inp.value.trim(); if(!v){ if(onDelete) return onDelete(); return showSession(s.id); } box.querySelectorAll("button").forEach(x=>x.disabled=true); await onSave(v); };
+    const done = async () => { const v = inp.value.trim(); if(!v){ if(onDelete) return onDelete(); return showSession(s.id); } box.querySelectorAll("button").forEach(x=>x.disabled=true); try{ await onSave(v); }catch(e){ fail(e); } if(box.isConnected) box.querySelectorAll("button").forEach(x=>x.disabled=false); };
     inp.onkeydown = e => { if(e.key==="Enter"){ e.preventDefault(); done(); } else if(e.key==="Escape") showSession(s.id); };
     box.querySelector('[data-o="save"]').onclick = done;
     box.querySelector('[data-o="cancel"]').onclick = () => { const y = scrollY; showSession(s.id); scrollTo(0, y); };
@@ -2605,7 +2605,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v34", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v35", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
