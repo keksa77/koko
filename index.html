@@ -200,6 +200,11 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .vidlink{color:var(--brand);font-weight:700;text-decoration:none}
 .tl-endline{padding:10px 0;border-top:1px solid var(--line);font-weight:700;font-size:16px}
 .totd{margin-top:8px}
+.gsec{border-top:1px solid var(--line);padding:4px 0}
+.gsec summary{cursor:pointer;font-weight:700;font-size:18px;padding:10px 0;list-style:none;display:flex;align-items:center;gap:10px}
+.gsec summary::-webkit-details-marker{display:none}
+.gsec summary::after{content:"▾";margin-left:auto;color:var(--muted)}.gsec[open] summary::after{content:"▴"}
+.gic{width:30px;text-align:center;font-size:20px}.gbody{padding:0 0 8px}
 .parbtn{display:inline-block;margin:4px 0 2px;border:1px dashed var(--line);background:none;border-radius:999px;padding:3px 10px;font-size:13px;color:var(--muted);cursor:pointer}
 .parbtn.on{border-style:solid;border-color:var(--brand);background:var(--sel);color:var(--brand);font-weight:700}
 .pi.par,.pi.parhead{border-left:4px solid var(--brand);padding-left:6px}.pi.par{border-top:1px dashed var(--line)}
@@ -268,6 +273,7 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
   <button data-tab="drills" class="on">Cvičení</button>
   <button data-tab="sessions">Tréninky</button>
   <button data-tab="add" class="tab2">＋ Přidat<br>cvičení</button>
+  <button data-tab="guide" style="flex:0 0 auto;padding:12px 10px" aria-label="Návod" hidden>📖</button>
   <button data-tab="settings" style="flex:0 0 auto;padding:12px 16px" aria-label="Nastavení">⚙</button>
 </nav>
 <div id="notices"></div>
@@ -2261,6 +2267,104 @@ function editSession(s={}){
   scrollTo(0,0);
 }
 
+/* ---------- NÁVOD (zatím jen pro správce) ---------- */
+const GUIDE_FOR_ALL = false;
+const GUIDE = [
+  ["🚀", "Začínáme", `
+    <ol class="hlp">
+      <li><b>Pozvánka:</b> do aplikace se dostane jen trenér, kterého správce pozval. Otevři odkaz z pozvánky, zadej e-mail, na který přišla, a zvol si heslo.</li>
+      <li><b>Potvrzení:</b> přijde ti e-mail – klepni na odkaz v něm. Pak se přihlásíš e-mailem a heslem.</li>
+      <li><b>Věkové kategorie:</b> při prvním přihlášení vyber, které kategorie trénuješ (např. U7). Podle nich se ti budou nabízet cvičení. Změnit je můžeš kdykoli v <b>⚙ Nastavení</b>.</li>
+      <li><b>Na plochu telefonu:</b> v prohlížeči zvol „Přidat na plochu“ – KoKo se pak otevírá jako aplikace.</li>
+    </ol>`],
+  ["⚽", "Cvičení – hledání a výběr", `
+    <ul class="hlp">
+      <li>Záložka <b>Cvičení</b> je katalog všech cvičení. Nahoře je hledání (název, pomůcky, popis).</li>
+      <li><b>Kat.</b> – věkové kategorie (výchozí podle Nastavení, tady jen dočasně). <b>Typ</b> – rozcvička, pohybová hra, socializační hra, vedení míče… Obojí jde vybrat vícekrát.</li>
+      <li><b>★ Oblíbené</b> – ukáže jen cvičení označená hvězdičkou. <b>🚫 Vyřazené</b> – cvičení, která jsi skryl z nabídky; šipkou <span class="hk">↩</span> je vrátíš.</li>
+      <li><b>🇨🇿🇸🇰 Video CZ/SK</b> – jen cvičení s českým nebo slovenským videem.</li>
+      <li>Náhled vlevo je zmenšená <b>animace</b> – klepnutím na kartu otevřeš detail.</li>
+    </ul>`],
+  ["📄", "Detail cvičení", `
+    <ul class="hlp">
+      <li>Nahoře typ, věk, délka, počet hráčů a trenérů, velikost hřiště.</li>
+      <li><b>＋ Přidat do tréninku</b> – vloží cvičení do tréninku (viz níže).</li>
+      <li><b>🚫 Vyřadit z nabídky</b> – cvičení se ti přestane zobrazovat (jen tobě, ostatním zůstane).</li>
+      <li><b>Animace</b> – pauza, rychlost, od začátku. <b>Video</b> – když je zadaný úsek (např. 1:20–2:05), přehraje se jen ten.</li>
+      <li>Průběh, Příprava, Pomůcky, Na co dbát a Varianty jsou v odrážkách.</li>
+      <li><b>Upravit</b> – u vlastního cvičení změníš cokoli; u cizího si vytvoříš vlastní kopii.</li>
+    </ul>`],
+  ["➕", "Rychlé přidání do tréninku", `
+    <ul class="hlp">
+      <li>Zelené <span class="hk">+</span> u každého cvičení v seznamu (nebo tlačítko v detailu).</li>
+      <li>Nabídne se trénink, který je <b>rozpracovaný</b> nebo má <b>nejbližší datum</b> (označený „Doporučeno“), a další tréninky.</li>
+      <li>Cvičení se vloží před závěrečný fotbal. Nebo zvol <b>＋ Nový trénink s tímto cvičením</b>.</li>
+    </ul>`],
+  ["📅", "Nový trénink", `
+    <ol class="hlp">
+      <li>Záložka <b>Tréninky</b> → žluté tlačítko <span class="hk">+</span> vlevo dole.</li>
+      <li>Vyplň <b>název, datum, začátek</b>, počet trenérů a dětí (aplikace pak upozorní, když cvičení potřebuje víc trenérů nebo jiný počet dětí).</li>
+      <li><b>Stav:</b> ✎ Rozpracovaný / ✓ Připravený.</li>
+      <li>Každý nový trénink má automaticky na konci <b>Fotbal – závěrečná hra</b> (20 min).</li>
+      <li>Nezapomeň <b>Uložit trénink</b> dole.</li>
+    </ol>`],
+  ["⏱", "Šablona 90 minut", `
+    <ul class="hlp">
+      <li>Doporučené rozdělení: Rozcvička 10 · Pohybové hry 20 · Míčová cvičení 25 · Souboje a malé hry 15 · Fotbal 20.</li>
+      <li>U každé části vidíš, kolik minut už máš (zeleně = sedí, žlutě = málo, červeně = moc).</li>
+      <li>Klepnutím na část šablony se zásobník vyfiltruje na vhodné typy cvičení.</li>
+      <li><b>Seřadit podle šablony</b> poskládá cvičení podle bloků.</li>
+    </ul>`],
+  ["🧩", "Skládání tréninku", `
+    <ul class="hlp">
+      <li><b>Zásobník</b> dole: hledání a filtry Kat./Typ, tlačítkem <span class="hk">+</span> přidáš cvičení.</li>
+      <li><span class="hk">▲</span> <span class="hk">▼</span> mění pořadí, <span class="hk">−</span> <span class="hk">+</span> délku po minutě, <span class="hk">✕</span> odebere.</li>
+      <li><b>Poznámka</b> u cvičení – např. kdo vede, které stanoviště.</li>
+      <li><b>＋ organizační pokyn</b> mezi cvičeními – pití, rozdělení do skupin, přesun… s vlastním časem.</li>
+      <li><b>⇉ souběžně s předchozím</b> – cvičení běží ve stejný čas na jiném stanovišti. Blok trvá jako nejdelší z nich; při střídání stanovišť nastav délku celé rotace.</li>
+      <li>Časy začátků se přepočítávají automaticky podle začátku tréninku.</li>
+      <li>Tlačítko <span class="hk">?</span> u Rozvrhu tréninku ukáže tuhle nápovědu přímo na místě.</li>
+    </ul>`],
+  ["🗂", "Karta tréninku", `
+    <ul class="hlp">
+      <li>Lišta nahoře i dole: <b>Upravit</b>, <b>Rozbalit vše</b> (příprava, pomůcky, na co dbát u všech cvičení), <b>Tisk / PDF</b>, <b>Duplikovat</b> (kopie s dnešním datem), <b>Smazat</b>.</li>
+      <li>Barevný proužek = minuty podle bloků šablony, čárka = 90 min. <b>rozpis ▾</b> ukáže čísla.</li>
+      <li>Každé cvičení má číslo, čas začátku, délku, animaci a odkaz <b>▶ Video</b>.</li>
+      <li>Souběžná cvičení jsou v zeleném rámečku jako <b>Stan. 1, Stan. 2…</b>; organizační pokyny v šedém pruhu 📋.</li>
+    </ul>`],
+  ["🌐", "Přidat cvičení z webu", `
+    <ul class="hlp">
+      <li>Záložka <b>＋ Přidat cvičení</b>: vlož odkaz na stránku nebo video se cvičením, případně poznámku.</li>
+      <li><b>Video od / do</b> – stačí jen úsek videa. Začátek jde převzít z YouTube: Sdílet → „Začít v…“ → Kopírovat. Z jednoho videa můžeš přidat víc cvičení s různými časy.</li>
+      <li>Automatická úloha odkaz do hodiny zpracuje (popis v odrážkách, typ, kategorie, animace) a cvičení uvidí všichni.</li>
+      <li>Po zpracování se ti při dalším otevření ukáže lišta <b>✅ Tvoje cvičení … je v katalogu</b> (nebo důvod, proč se to nepovedlo).</li>
+      <li>Nebo <b>Zadat cvičení ručně</b> – vyplníš formulář sám.</li>
+    </ul>`],
+  ["👥", "Pozvání trenéra (správce)", `
+    <ol class="hlp">
+      <li><b>⚙ Nastavení → Pozvánky trenérů</b>: zadej e-mail trenéra a klepni na <b>Pozvat</b>.</li>
+      <li>Pošli pozvánku tlačítkem <b>📱 Sdílet</b> (WhatsApp, SMS…) nebo <b>📧 E-mail</b>.</li>
+      <li>Trenér se zaregistruje přesně tím e-mailem; v přehledu pak uvidíš <span class="tplv ok">✓ zaregistrován</span>.</li>
+    </ol>`],
+  ["ℹ️", "Ostatní", `
+    <ul class="hlp">
+      <li>Číslo verze aplikace je vpravo dole a v Nastavení. Když se nová verze neukáže, obnov stránku.</li>
+      <li>Cvičení vidí všichni přihlášení trenéři; oblíbená a vyřazená si každý nastavuje sám.</li>
+      <li>Tréninky vidí jen jejich autor.</li>
+    </ul>`]
+];
+function renderGuide(){
+  fab.hidden = true;
+  app.innerHTML = `<div class="card"><h2 style="margin-top:0">📖 Návod k aplikaci KoKo</h2>
+    <p class="muted" style="margin-top:0">Klepni na téma pro rozbalení.${GUIDE_FOR_ALL ? "" : " <b>Tato záložka je zatím vidět jen správci.</b>"}</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:6px"><button type="button" class="btn small" id="gAll">Rozbalit vše</button></div>
+    ${GUIDE.map(([ic, t, html], i) => `<details class="gsec" ${i===0?"open":""}><summary><span class="gic">${ic}</span>${t}</summary><div class="gbody">${html}</div></details>`).join("")}
+  </div>`;
+  const all = document.getElementById("gAll");
+  all.onclick = () => { const ds = app.querySelectorAll("details.gsec"); const open = ![...ds].every(d=>d.open); ds.forEach(d=>d.open=open); all.textContent = open ? "Sbalit vše" : "Rozbalit vše"; };
+  scrollTo(0,0);
+}
+
 /* ---------- SETTINGS ---------- */
 async function loadProfile(){
   const { data, error } = await sb.from("profiles").select("*").eq("user_id", state.user.id).maybeSingle();
@@ -2339,7 +2443,7 @@ async function loadInvites(){
 function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v25", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v26", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
@@ -2355,6 +2459,8 @@ function render(){
   /* Záložka „Přidat cvičení“ je dočasně skrytá – vidí ji jen správce. Pro zpřístupnění všem nastav ADD_TAB_FOR_ALL = true. */
   const addTab = document.querySelector('#tabs [data-tab="add"]'); if(addTab) addTab.hidden = !(ADD_TAB_FOR_ALL || state.isAdmin);
   if(state.tab==="add" && !(ADD_TAB_FOR_ALL || state.isAdmin)) state.tab = "drills";
+  const gTab = document.querySelector('#tabs [data-tab="guide"]'); if(gTab) gTab.hidden = !(GUIDE_FOR_ALL || state.isAdmin);
+  if(state.tab==="guide"){ if(GUIDE_FOR_ALL || state.isAdmin) return renderGuide(); state.tab = "drills"; }
   if(state.tab==="add"){ renderAdd(); Promise.all([loadSubmissions(), loadDrills()]).then(()=>{ if(state.tab==="add" && !state.view) renderAdd(); }).catch(fail); return; }
   fab.hidden = false;
   state.tab==="drills" ? renderDrills() : renderSessions();
