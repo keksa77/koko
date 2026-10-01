@@ -200,6 +200,11 @@ input[type=time]{width:100%;border:1px solid var(--line);background:var(--card);
 .vidlink{color:var(--brand);font-weight:700;text-decoration:none}
 .tl-endline{padding:10px 0;border-top:1px solid var(--line);font-weight:700;font-size:16px}
 .totd{margin-top:8px}
+.mvc{flex:none;display:flex;flex-direction:column;gap:3px;margin-right:2px}
+.mvc button{width:34px;height:28px;border:1px solid var(--line);border-radius:7px;background:var(--chip);color:var(--brand);font-size:14px;line-height:1;padding:0;cursor:pointer}
+.mvc button:disabled{opacity:.3;cursor:default}
+@keyframes gmoved{from{background:var(--sel)}to{background:transparent}}.gwrap.moved{animation:gmoved 1s}
+.hver{font-size:11px;opacity:.8;font-weight:600;margin-left:3px;letter-spacing:0;white-space:nowrap}
 .joinbtn,.splitbtn{display:block;margin:2px auto;border:1px dashed var(--line);background:var(--card);color:var(--muted);border-radius:999px;padding:5px 14px;font-size:14px;cursor:pointer}
 .joinbtn:active,.joinbtn:hover{border-color:var(--brand);color:var(--brand)}
 .splitbtn{margin:6px auto}.splitbtn:active,.splitbtn:hover{border-color:#b42318;color:#b42318}
@@ -1903,7 +1908,8 @@ const HELP = {
     <p class="muted">Nic se neuloží, dokud neklepneš na <b>Uložit trénink</b>.</p>` },
   session: { title:"Nápověda – karta tréninku", html:`
     <ul class="hlp">
-      <li><b>Upravit</b> – otevře úpravu: pořadí (šipky ▲ ▼), délky, organizační pokyny, přidání cvičení.</li>
+      <li><span class="hk">▲</span> <span class="hk">▼</span> u každého cvičení (nebo u rámečku souběžných cvičení) – posune ho o místo výš/níž přímo tady. Uloží se hned.</li>
+      <li><b>Upravit</b> – otevře úpravu: délky, organizační pokyny, přidání a odebrání cvičení.</li>
       <li><b>Rozbalit vše</b> – ukáže u všech cvičení přípravu, pomůcky a na co dbát.</li>
       <li><b>Tisk / PDF</b> – vytiskne trénink nebo ho uloží jako PDF.</li>
       <li><b>Duplikovat</b> – vytvoří kopii tréninku s dnešním datem.</li>
@@ -1987,7 +1993,7 @@ function showSession(id){
   const start = toMin(s.start_time);
   const kids = s.players_expected;
   let t = 0, no = 0, idx = 0;
-  const drillHtml = (it, timeHtml) => {
+  const drillHtml = (it, timeHtml, pre = "") => {
     const d = state.drills.find(x=>x.id===it.drill_id); if(!d) return "";
     const dur=it.duration_min||0; no++; const i = idx++;
     const url = safeUrl(d.video_url);
@@ -2003,7 +2009,7 @@ function showSession(id){
     ].filter(Boolean).join("");
     const bk = blockOf(d);
     return `<div class="tl2">
-      <div class="tl2-head"><span class="tl2-no" style="background:${bk?bk.col:"#94a3b8"}">${no}</span><p class="drill-title grow">${esc(d.name)}</p><span class="tl2-time">${timeHtml(dur)}</span></div>
+      <div class="tl2-head">${pre}<span class="tl2-no" style="background:${bk?bk.col:"#94a3b8"}">${no}</span><p class="drill-title grow">${esc(d.name)}</p><span class="tl2-time">${timeHtml(dur)}</span></div>
       ${Anim.has(d.name)?`<div class="tl2-anim noprint" data-thumb="${esc(d.name)}" data-lbl data-big="${i}" title="Klepnutím ovládání animace"></div><div class="tl-big noprint" data-bigbox="${i}" hidden></div>`:""}
       <div class="tl-meta">${CATS[d.category]}${pl?` · <span${kidsWarn?' class="warn"':""}>👥 ${esc(pl)}</span>`:""}${d.coaches_needed?` · <span${coachWarn?' class="warn"':""}>🧑‍🏫 ${d.coaches_needed}</span>`:""}${url?` · <a class="vidlink noprint" style="white-space:nowrap" href="${esc(vidHref(d))}" target="_blank" rel="noopener">▶ Video${segLabel(d)?` (${fmtT(d.video_start||0)}–${d.video_end!=null?fmtT(d.video_end):""})`:""}</a>`:""}</div>
       ${it.note?`<div class="tl-note">📌 ${esc(it.note)}</div>`:""}
@@ -2014,15 +2020,16 @@ function showSession(id){
   const groups = groupItems(items);
   const joinBtn = (gi) => { const g = groups[gi], prev = groups[gi-1]; if(!prev || isOrg(g.items[0]) || isOrg(prev.items[0]) || !g.items[0].id) return "";
     return `<button type="button" class="joinbtn noprint" data-join="${g.items[0].id}">⇉ spojit s předchozím – běží zároveň</button>`; };
-  const rows = groups.map((g, gi) => joinBtn(gi) + (() => {
+  const mvc = gi => groups.length < 2 ? "" : `<span class="mvc noprint"><button type="button" data-gup="${gi}" aria-label="Posunout výš" ${gi===0?"disabled":""}>▲</button><button type="button" data-gdn="${gi}" aria-label="Posunout níž" ${gi===groups.length-1?"disabled":""}>▼</button></span>`;
+  const rows = groups.map((g, gi) => joinBtn(gi) + `<div class="gwrap" data-g="${gi}">` + (() => {
     const from = t; t += g.dur; const clock = start!=null ? hhmm(start+from) : `${from}. min`;
     if(g.items.length===1){ const it = g.items[0];
-      if(isOrg(it)) return `<div class="tl-org"><span class="tl-org-ic">📋</span><div class="grow" style="min-width:0"><b>Organizační pokyny</b>${it.title?`<div class="tl-org-t">${esc(it.title)}</div>`:""}</div><span class="tl2-time"><b>${clock}</b><span>${it.duration_min||0}′</span></span></div>`;
-      return drillHtml(it, dur => `<b>${clock}</b><span>${dur}′</span>`); }
-    return `<div class="tl-par"><div class="tl-par-h"><span class="grow">⇉ Souběžně · ${g.items.length} stanoviště</span><span class="tl2-time"><b>${clock}</b><span>${g.dur}′</span></span></div>`
+      if(isOrg(it)) return `<div class="tl-org">${mvc(gi)}<span class="tl-org-ic">📋</span><div class="grow" style="min-width:0"><b>Organizační pokyny</b>${it.title?`<div class="tl-org-t">${esc(it.title)}</div>`:""}</div><span class="tl2-time"><b>${clock}</b><span>${it.duration_min||0}′</span></span></div>`;
+      return drillHtml(it, dur => `<b>${clock}</b><span>${dur}′</span>`, mvc(gi)); }
+    return `<div class="tl-par"><div class="tl-par-h">${mvc(gi)}<span class="grow">⇉ Souběžně · ${g.items.length} stanoviště</span><span class="tl2-time"><b>${clock}</b><span>${g.dur}′</span></span></div>`
       + `<div class="muted noprint" style="font-size:14px;margin:-2px 0 4px">Blok trvá jako nejdelší cvičení. Délky měníš v Upravit.</div>`
       + g.items.map((it,k) => (k && it.id ? `<button type="button" class="splitbtn noprint" data-split="${it.id}">✂ oddělit – poběží až po předchozím</button>` : "") + drillHtml(it, dur => `<b class="stan">Stan. ${k+1}</b><span>${dur}′</span>`)).join("") + `</div>`;
-  })()).join("");
+  })() + `</div>`).join("");
   const end = start!=null ? hhmm(start+t) : null;
   const blk = {}, parts = []; groups.forEach(g => g.items.forEach(it => { const b = isOrg(it) ? null : blockOf(state.drills.find(x=>x.id===it.drill_id)); const k = isOrg(it) ? "org" : b ? b.k : "jine"; const m = g.dur / g.items.length; blk[k] = (blk[k]||0) + m; parts.push({ m, col: isOrg(it) ? "#d6dbe0" : b ? b.col : "#94a3b8" }); }));
   for(const k in blk) blk[k] = Math.round(blk[k]);
@@ -2054,6 +2061,18 @@ function showSession(id){
     const { error } = await sb.from("session_drills").update({ parallel: val }).eq("id", rowId);
     if(error){ btn.disabled = false; return fail(error); }
     const y = scrollY; await loadSessions(); showSession(s.id); scrollTo(0, y); toast(val ? "Spojeno – cvičení běží zároveň" : "Odděleno – cvičení poběží po sobě"); };
+  const moveGroup = async (gi, dir, btn) => { const j = gi + dir; if(j < 0 || j >= groups.length) return;
+    app.querySelectorAll("[data-gup],[data-gdn]").forEach(x => x.disabled = true);
+    const order = groups.slice(); [order[gi], order[j]] = [order[j], order[gi]];
+    const flat = order.flatMap(g => g.items);
+    const ups = flat.map((it, pos) => ({ it, pos })).filter(x => x.it.id && x.it.position !== x.pos)
+      .map(x => sb.from("session_drills").update({ position: x.pos, parallel: x.pos === 0 ? false : !!x.it.parallel }).eq("id", x.it.id));
+    const res = await Promise.all(ups); const err = res.find(r => r.error); if(err) return fail(err.error);
+    await loadSessions(); showSession(s.id);
+    const el = app.querySelector(`.gwrap[data-g="${j}"]`); if(el){ el.scrollIntoView({ block:"center" }); el.classList.add("moved"); }
+    toast(dir < 0 ? "Posunuto výš" : "Posunuto níž"); };
+  app.querySelectorAll("[data-gup]").forEach(b => b.onclick = () => moveGroup(+b.dataset.gup, -1, b));
+  app.querySelectorAll("[data-gdn]").forEach(b => b.onclick = () => moveGroup(+b.dataset.gdn, +1, b));
   app.querySelectorAll("[data-join]").forEach(b => b.onclick = () => setPar(b.dataset.join, true, b));
   app.querySelectorAll("[data-split]").forEach(b => b.onclick = () => setPar(b.dataset.split, false, b));
   const on = (act, fn) => app.querySelectorAll(`[data-act="${act}"]`).forEach(b => b.onclick = fn);
@@ -2340,6 +2359,7 @@ const GUIDE = [
     </ul>`],
   ["🗂", "Karta tréninku", `
     <ul class="hlp">
+      <li><span class="hk">▲</span> <span class="hk">▼</span> vlevo u každého cvičení posunou cvičení (nebo celý rámeček souběžných cvičení či organizační pokyn) o místo výš/níž. Uloží se hned a časy se přepočítají.</li>
       <li>Lišta nahoře i dole: <b>Upravit</b>, <b>Rozbalit vše</b> (příprava, pomůcky, na co dbát u všech cvičení), <b>Tisk / PDF</b>, <b>Duplikovat</b> (kopie s dnešním datem), <b>Smazat</b>.</li>
       <li>Barevný proužek = minuty podle bloků šablony, čárka = 90 min. <b>rozpis ▾</b> ukáže čísla.</li>
       <li>Každé cvičení má číslo, čas začátku, délku, animaci a odkaz <b>▶ Video</b>.</li>
@@ -2455,10 +2475,10 @@ async function loadInvites(){
     const nb = document.querySelector(`[data-ishare="${CSS.escape(email)}"]`); if(nb){ nb.scrollIntoView({block:"center"}); nb.classList.add("pulse"); }
   }; }
 }
-function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo</span><span class="sub">kouč kopané</span>`; }
+function setTitle(){ document.getElementById("title").innerHTML = `<span class="brand">⚽ KoKo<sup class="hver">${APP_VERSION}</sup></span><span class="sub">kouč kopané</span>`; }
 
 /* ---------- SHELL ---------- */
-const APP_VERSION = "v28", APP_DATE = "1. 10. 2026";
+const APP_VERSION = "v29", APP_DATE = "1. 10. 2026";
 const ADD_TAB_FOR_ALL = false;
 function render(){
   const av = document.getElementById("appver"); if(av) av.textContent = `KoKo ${APP_VERSION} · ${APP_DATE}`;
